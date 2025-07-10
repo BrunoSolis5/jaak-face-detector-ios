@@ -22,9 +22,11 @@ internal class JAAKCameraManager: NSObject {
     /// - Parameter configuration: detector configuration
     /// - Throws: JAAKFaceDetectorError if setup fails
     func setupCaptureSession(with configuration: JAAKFaceDetectorConfiguration) throws {
+        print("🔧 [CameraManager] Setting up capture session...")
         // Camera validation removed for simplicity
         
         captureSession.beginConfiguration()
+        print("🔧 [CameraManager] Session configuration started")
         
         // Set session preset
         if captureSession.canSetSessionPreset(configuration.videoQuality) {
@@ -43,16 +45,74 @@ internal class JAAKCameraManager: NSObject {
         try setupVideoOutput()
         
         // Setup movie file output for recording
-        try setupMovieFileOutput()
+        // Temporarily disabled to test if it conflicts with video data output
+        // try setupMovieFileOutput()
+        print("⚠️ [CameraManager] MovieFileOutput temporarily disabled for testing")
         
         captureSession.commitConfiguration()
+        print("✅ [CameraManager] Capture session configuration completed")
+        
+        // Debug: Check connections
+        print("🔍 [CameraManager] Session inputs: \(captureSession.inputs.count)")
+        print("🔍 [CameraManager] Session outputs: \(captureSession.outputs.count)")
+        
+        for input in captureSession.inputs {
+            print("📥 [CameraManager] Input: \(input)")
+        }
+        
+        for output in captureSession.outputs {
+            print("📤 [CameraManager] Output: \(output)")
+            if let videoOutput = output as? AVCaptureVideoDataOutput {
+                print("🎬 [CameraManager] Video output connections: \(videoOutput.connections.count)")
+                for connection in videoOutput.connections {
+                    print("🔗 [CameraManager] Connection: \(connection), enabled: \(connection.isEnabled), active: \(connection.isActive)")
+                }
+            }
+        }
     }
     
     /// Start capture session
     func startSession() {
+        print("🎥 [CameraManager] Starting capture session...")
         if !captureSession.isRunning {
+            print("🎥 [CameraManager] Session not running, starting now...")
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 self?.captureSession.startRunning()
+                
+                // Wait a moment for session to fully start, then check connections
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self?.checkAndActivateConnections()
+                    print("✅ [CameraManager] Capture session started successfully")
+                }
+            }
+        } else {
+            print("⚠️ [CameraManager] Session already running")
+        }
+    }
+    
+    /// Check and activate connections if needed
+    private func checkAndActivateConnections() {
+        print("🔍 [CameraManager] Checking connections after session start...")
+        
+        for output in captureSession.outputs {
+            if let videoOutput = output as? AVCaptureVideoDataOutput {
+                for connection in videoOutput.connections {
+                    print("🔗 [CameraManager] Connection status: enabled=\(connection.isEnabled), active=\(connection.isActive)")
+                    
+                    if connection.isEnabled && !connection.isActive {
+                        print("⚡ [CameraManager] Connection is enabled but not active")
+                        
+                        // Check connection properties
+                        print("🔧 [CameraManager] Connection input ports: \(connection.inputPorts.count)")
+                        if let output = connection.output {
+                            print("🔧 [CameraManager] Connection has output: \(type(of: output))")
+                        }
+                    } else if connection.isActive {
+                        print("✅ [CameraManager] Connection is active and should be sending frames")
+                    } else {
+                        print("❌ [CameraManager] Connection is not enabled")
+                    }
+                }
             }
         }
     }
@@ -108,20 +168,26 @@ internal class JAAKCameraManager: NSObject {
     // MARK: - Private Methods
     
     private func setupCameraInput(position: AVCaptureDevice.Position, configuration: JAAKFaceDetectorConfiguration) throws {
+        print("📷 [CameraManager] Setting up camera input for position: \(position)")
         // Get camera device for specified position (validation removed)
         guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position) else {
+            print("❌ [CameraManager] No camera device found for position: \(position)")
             throw JAAKFaceDetectorError(
                 label: "No camera device found for position",
                 code: "NO_CAMERA_FOR_POSITION"
             )
         }
         
+        print("📷 [CameraManager] Camera device found: \(camera.localizedName)")
+        
         do {
             let input = try AVCaptureDeviceInput(device: camera)
             if captureSession.canAddInput(input) {
                 captureSession.addInput(input)
                 videoInput = input
+                print("✅ [CameraManager] Camera input added successfully")
             } else {
+                print("❌ [CameraManager] Cannot add camera input to session")
                 throw JAAKFaceDetectorError(
                     label: "Cannot add camera input",
                     code: "CAMERA_INPUT_FAILED"
@@ -165,16 +231,24 @@ internal class JAAKCameraManager: NSObject {
     }
     
     private func setupVideoOutput() throws {
+        print("📹 [CameraManager] Setting up video output...")
         let output = AVCaptureVideoDataOutput()
-        output.setSampleBufferDelegate(self, queue: videoDataOutputQueue)
+        
+        // Configure video settings first
         output.videoSettings = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
         ]
         
+        // Set delegate immediately since we don't have MovieFileOutput conflict
+        output.setSampleBufferDelegate(self, queue: videoDataOutputQueue)
+        print("📹 [CameraManager] Video output configured with delegate: \(String(describing: output.sampleBufferDelegate))")
+        
         if captureSession.canAddOutput(output) {
             captureSession.addOutput(output)
             videoOutput = output
+            print("✅ [CameraManager] Video output added to session successfully")
         } else {
+            print("❌ [CameraManager] Cannot add video output to session")
             throw JAAKFaceDetectorError(
                 label: "Cannot add video output",
                 code: "VIDEO_OUTPUT_FAILED"
@@ -210,6 +284,7 @@ internal class JAAKCameraManager: NSObject {
 
 extension JAAKCameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        print("🎬🎬🎬 [CameraManager] *** FRAME RECEIVED *** Sample buffer captured, forwarding to delegate")
         delegate?.cameraManager(self, didOutput: sampleBuffer)
     }
 }

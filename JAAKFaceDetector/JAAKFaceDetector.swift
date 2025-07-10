@@ -66,7 +66,9 @@ public class JAAKFaceDetectorSDK: NSObject {
             try loadModels()
             
             // Start camera
+            print("🎥 [FaceDetectorSDK] About to start camera session...")
             cameraManager.startSession()
+            print("🎥 [FaceDetectorSDK] Camera session start command sent")
             
             // Start security monitoring
             securityMonitor?.startMonitoring()
@@ -230,9 +232,17 @@ public class JAAKFaceDetectorSDK: NSObject {
     /// Load AI models for face detection
     /// - Throws: JAAKFaceDetectorError if unable to load models
     public func loadModels() throws {
+        print("🔧 [FaceDetectorSDK] Starting model loading...")
         updateStatus(.loading)
         
-        try faceDetectionEngine?.loadModels()
+        guard let faceDetectionEngine = faceDetectionEngine else {
+            print("❌ [FaceDetectorSDK] FaceDetectionEngine is nil")
+            throw JAAKFaceDetectorError(label: "Face detection engine not initialized", code: "FACE_ENGINE_NIL")
+        }
+        
+        print("🔧 [FaceDetectorSDK] Calling faceDetectionEngine.loadModels()...")
+        try faceDetectionEngine.loadModels()
+        print("✅ [FaceDetectorSDK] Models loaded successfully")
         
         updateStatus(.loaded)
     }
@@ -305,12 +315,16 @@ public class JAAKFaceDetectorSDK: NSObject {
     // MARK: - Private Methods
     
     private func setupComponents() {
+        print("🔧 [FaceDetectorSDK] Setting up components...")
+        
         // Initialize core components
         cameraManager = JAAKCameraManager()
         cameraManager?.delegate = self
+        print("✅ [FaceDetectorSDK] CameraManager initialized")
         
         faceDetectionEngine = JAAKFaceDetectionEngine(configuration: configuration)
         faceDetectionEngine?.delegate = self
+        print("✅ [FaceDetectorSDK] FaceDetectionEngine initialized")
         
         videoRecorder = JAAKVideoRecorder(configuration: configuration)
         videoRecorder?.delegate = self
@@ -340,9 +354,12 @@ public class JAAKFaceDetectorSDK: NSObject {
         
         // Initialize instruction components
         if configuration.enableInstructions {
+            print("📋 [FaceDetectorSDK] Creating instruction view (enableInstructions = true)")
             instructionView = JAAKInstructionView(configuration: configuration)
             instructionController = JAAKInstructionController(configuration: configuration, instructionView: instructionView!)
             instructionController?.delegate = self
+        } else {
+            print("📋 [FaceDetectorSDK] Skipping instruction view (enableInstructions = false)")
         }
     }
     
@@ -382,6 +399,7 @@ public class JAAKFaceDetectorSDK: NSObject {
 extension JAAKFaceDetectorSDK: JAAKCameraManagerDelegate {
     func cameraManager(_ manager: JAAKCameraManager, didOutput sampleBuffer: CMSampleBuffer) {
         // Process frame for face detection
+        print("📹 [FaceDetectorSDK] Received frame from camera, forwarding to face detection engine")
         faceDetectionEngine?.processVideoFrame(sampleBuffer)
     }
     
@@ -398,6 +416,8 @@ extension JAAKFaceDetectorSDK: JAAKCameraManagerDelegate {
 
 extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didDetectFace message: JAAKFaceDetectionMessage, boundingBox: CGRect) {
+        print("🎯 [FaceDetectorSDK] Face detection delegate called: \(message.label)")
+        
         // Update face tracking overlay
         faceTrackingOverlay?.updateFaceFrame(boundingBox)
         faceTrackingOverlay?.setValidationState(message.correctPosition)
