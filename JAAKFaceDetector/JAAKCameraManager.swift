@@ -13,7 +13,6 @@ internal class JAAKCameraManager: NSObject {
     private var movieFileOutput: AVCaptureMovieFileOutput?
     
     private let videoDataOutputQueue = DispatchQueue(label: "com.jaak.facedetector.videoqueue", qos: .userInitiated)
-    private var deviceValidator: JAAKDeviceValidator?
     
     weak var delegate: JAAKCameraManagerDelegate?
     
@@ -23,16 +22,7 @@ internal class JAAKCameraManager: NSObject {
     /// - Parameter configuration: detector configuration
     /// - Throws: JAAKFaceDetectorError if setup fails
     func setupCaptureSession(with configuration: JAAKFaceDetectorConfiguration) throws {
-        // Initialize device validator
-        deviceValidator = JAAKDeviceValidator(configuration: configuration)
-        
-        // Validate that we have at least one allowed camera
-        guard let validator = deviceValidator, validator.hasAllowedCameras() else {
-            throw JAAKFaceDetectorError(
-                label: "No allowed camera devices found",
-                code: "NO_ALLOWED_CAMERAS"
-            )
-        }
+        // Camera validation removed for simplicity
         
         captureSession.beginConfiguration()
         
@@ -118,27 +108,11 @@ internal class JAAKCameraManager: NSObject {
     // MARK: - Private Methods
     
     private func setupCameraInput(position: AVCaptureDevice.Position, configuration: JAAKFaceDetectorConfiguration) throws {
-        // Get validated camera device
-        guard let validator = deviceValidator else {
+        // Get camera device for specified position (validation removed)
+        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position) else {
             throw JAAKFaceDetectorError(
-                label: "Device validator not initialized",
-                code: "DEVICE_VALIDATOR_NIL"
-            )
-        }
-        
-        guard let camera = validator.getFirstAllowedDevice(for: position) else {
-            throw JAAKFaceDetectorError(
-                label: "No allowed camera device found for position",
-                code: "NO_ALLOWED_CAMERA_FOR_POSITION"
-            )
-        }
-        
-        // Double-check validation result
-        let validationResult = validator.validateDevice(camera)
-        guard validationResult.isAllowed else {
-            throw JAAKFaceDetectorError(
-                label: "Camera device validation failed: \(validationResult.errorMessage ?? "Unknown reason")",
-                code: "CAMERA_VALIDATION_FAILED"
+                label: "No camera device found for position",
+                code: "NO_CAMERA_FOR_POSITION"
             )
         }
         

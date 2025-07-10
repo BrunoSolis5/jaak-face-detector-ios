@@ -7,7 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2E1478BC0098F0FCE772DC0D /* Pods_JAAKFaceDetectorTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F83BA306279D391EFF31A30 /* Pods_JAAKFaceDetectorTests.framework */; };
+		7280410147DDA82FA336E964 /* Pods_JAAKFaceDetector.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FAF511BC90E41E7710D6B7B8 /* Pods_JAAKFaceDetector.framework */; };
 		8AF9E3CA2E1EFDB800EEA8B3 /* JAAKFaceDetector.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8AF9E3BF2E1EFDB700EEA8B3 /* JAAKFaceDetector.framework */; };
+		8AF9E3FF2E1F27BE00EEA8B3 /* Podfile in Resources */ = {isa = PBXBuildFile; fileRef = 8AF9E3FE2E1F27BE00EEA8B3 /* Podfile */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -21,8 +24,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		05258EB8858B5665B4680F66 /* Pods-JAAKFaceDetector.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JAAKFaceDetector.debug.xcconfig"; path = "Target Support Files/Pods-JAAKFaceDetector/Pods-JAAKFaceDetector.debug.xcconfig"; sourceTree = "<group>"; };
+		3D006FC1F8AAC8C4E95D3AFC /* Pods-JAAKFaceDetectorTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JAAKFaceDetectorTests.release.xcconfig"; path = "Target Support Files/Pods-JAAKFaceDetectorTests/Pods-JAAKFaceDetectorTests.release.xcconfig"; sourceTree = "<group>"; };
+		3F83BA306279D391EFF31A30 /* Pods_JAAKFaceDetectorTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_JAAKFaceDetectorTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		6D5DB8B0F38F9F496812610E /* Pods-JAAKFaceDetectorTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JAAKFaceDetectorTests.debug.xcconfig"; path = "Target Support Files/Pods-JAAKFaceDetectorTests/Pods-JAAKFaceDetectorTests.debug.xcconfig"; sourceTree = "<group>"; };
+		70259726851AF118ED06DA18 /* Pods-JAAKFaceDetector.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JAAKFaceDetector.release.xcconfig"; path = "Target Support Files/Pods-JAAKFaceDetector/Pods-JAAKFaceDetector.release.xcconfig"; sourceTree = "<group>"; };
 		8AF9E3BF2E1EFDB700EEA8B3 /* JAAKFaceDetector.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JAAKFaceDetector.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8AF9E3C92E1EFDB800EEA8B3 /* JAAKFaceDetectorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JAAKFaceDetectorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8AF9E3FE2E1F27BE00EEA8B3 /* Podfile */ = {isa = PBXFileReference; lastKnownFileType = text; path = Podfile; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
+		FAF511BC90E41E7710D6B7B8 /* Pods_JAAKFaceDetector.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_JAAKFaceDetector.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -56,6 +66,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7280410147DDA82FA336E964 /* Pods_JAAKFaceDetector.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,6 +75,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8AF9E3CA2E1EFDB800EEA8B3 /* JAAKFaceDetector.framework in Frameworks */,
+				2E1478BC0098F0FCE772DC0D /* Pods_JAAKFaceDetectorTests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -73,9 +85,12 @@
 		8AF9E3B52E1EFDB700EEA8B3 = {
 			isa = PBXGroup;
 			children = (
+				8AF9E3FE2E1F27BE00EEA8B3 /* Podfile */,
 				8AF9E3C12E1EFDB700EEA8B3 /* JAAKFaceDetector */,
 				8AF9E3CD2E1EFDB800EEA8B3 /* JAAKFaceDetectorTests */,
 				8AF9E3C02E1EFDB700EEA8B3 /* Products */,
+				E87255BD4C3D4FBC04B20F3A /* Pods */,
+				E4EC645A95223A97BB28CA64 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -86,6 +101,26 @@
 				8AF9E3C92E1EFDB800EEA8B3 /* JAAKFaceDetectorTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		E4EC645A95223A97BB28CA64 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				FAF511BC90E41E7710D6B7B8 /* Pods_JAAKFaceDetector.framework */,
+				3F83BA306279D391EFF31A30 /* Pods_JAAKFaceDetectorTests.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		E87255BD4C3D4FBC04B20F3A /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				05258EB8858B5665B4680F66 /* Pods-JAAKFaceDetector.debug.xcconfig */,
+				70259726851AF118ED06DA18 /* Pods-JAAKFaceDetector.release.xcconfig */,
+				6D5DB8B0F38F9F496812610E /* Pods-JAAKFaceDetectorTests.debug.xcconfig */,
+				3D006FC1F8AAC8C4E95D3AFC /* Pods-JAAKFaceDetectorTests.release.xcconfig */,
+			);
+			path = Pods;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -105,6 +140,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8AF9E3D22E1EFDB800EEA8B3 /* Build configuration list for PBXNativeTarget "JAAKFaceDetector" */;
 			buildPhases = (
+				480CB243665D71DAB96DE0E6 /* [CP] Check Pods Manifest.lock */,
 				8AF9E3BA2E1EFDB700EEA8B3 /* Headers */,
 				8AF9E3BB2E1EFDB700EEA8B3 /* Sources */,
 				8AF9E3BC2E1EFDB700EEA8B3 /* Frameworks */,
@@ -118,8 +154,6 @@
 				8AF9E3C12E1EFDB700EEA8B3 /* JAAKFaceDetector */,
 			);
 			name = JAAKFaceDetector;
-			packageProductDependencies = (
-			);
 			productName = JAAKFaceDetector;
 			productReference = 8AF9E3BF2E1EFDB700EEA8B3 /* JAAKFaceDetector.framework */;
 			productType = "com.apple.product-type.framework";
@@ -128,6 +162,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8AF9E3D72E1EFDB800EEA8B3 /* Build configuration list for PBXNativeTarget "JAAKFaceDetectorTests" */;
 			buildPhases = (
+				F6E7E68CB7BC7EBD1BCCE3FE /* [CP] Check Pods Manifest.lock */,
 				8AF9E3C52E1EFDB800EEA8B3 /* Sources */,
 				8AF9E3C62E1EFDB800EEA8B3 /* Frameworks */,
 				8AF9E3C72E1EFDB800EEA8B3 /* Resources */,
@@ -141,8 +176,6 @@
 				8AF9E3CD2E1EFDB800EEA8B3 /* JAAKFaceDetectorTests */,
 			);
 			name = JAAKFaceDetectorTests;
-			packageProductDependencies = (
-			);
 			productName = JAAKFaceDetectorTests;
 			productReference = 8AF9E3C92E1EFDB800EEA8B3 /* JAAKFaceDetectorTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -190,6 +223,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8AF9E3FF2E1F27BE00EEA8B3 /* Podfile in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -201,6 +235,53 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		480CB243665D71DAB96DE0E6 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-JAAKFaceDetector-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		F6E7E68CB7BC7EBD1BCCE3FE /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-JAAKFaceDetectorTests-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		8AF9E3BB2E1EFDB700EEA8B3 /* Sources */ = {
@@ -230,6 +311,7 @@
 /* Begin XCBuildConfiguration section */
 		8AF9E3D32E1EFDB800EEA8B3 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 05258EB8858B5665B4680F66 /* Pods-JAAKFaceDetector.debug.xcconfig */;
 			buildSettings = {
 				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
 				CODE_SIGN_STYLE = Automatic;
@@ -242,6 +324,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -262,6 +345,7 @@
 		};
 		8AF9E3D42E1EFDB800EEA8B3 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70259726851AF118ED06DA18 /* Pods-JAAKFaceDetector.release.xcconfig */;
 			buildSettings = {
 				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
 				CODE_SIGN_STYLE = Automatic;
@@ -274,6 +358,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -419,6 +504,7 @@
 		};
 		8AF9E3D82E1EFDB800EEA8B3 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6D5DB8B0F38F9F496812610E /* Pods-JAAKFaceDetectorTests.debug.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -434,6 +520,7 @@
 		};
 		8AF9E3D92E1EFDB800EEA8B3 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 3D006FC1F8AAC8C4E95D3AFC /* Pods-JAAKFaceDetectorTests.release.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

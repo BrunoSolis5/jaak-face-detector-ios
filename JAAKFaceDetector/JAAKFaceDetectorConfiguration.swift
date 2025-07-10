@@ -35,7 +35,6 @@ public struct JAAKFaceDetectorConfiguration {
     public var enableMicrophone: Bool = false
     public var cameraPosition: AVCaptureDevice.Position = .back
     public var videoQuality: AVCaptureSession.Preset = .high
-    public var validateCamera: Bool = false
     
     // Face Detection Settings
     public var disableFaceDetection: Bool = false
@@ -54,10 +53,7 @@ public struct JAAKFaceDetectorConfiguration {
     // Face Tracker Settings
     public var faceTrackerStyles: JAAKFaceTrackerStyles = JAAKFaceTrackerStyles()
     
-    // Security Settings
-    public var allowedCameraDevices: [String] = []
-    public var blockedCameraDevices: [String] = []
-    public var useOnlyLocalBlacklist: Bool = false
+    // Security Settings removed for simplicity
     
     // Instruction Settings
     public var enableInstructions: Bool = false

@@ -1,0 +1,49 @@
+Pod::Spec.new do |spec|
+  spec.name          = "JAAKFaceDetector"
+  spec.version       = "1.0.0"
+  spec.summary       = "AI-powered face detection and recording library for iOS using MediaPipe BlazeFace"
+  spec.description   = <<-DESC
+                       JAAKFaceDetector is an advanced face detection library that provides:
+                       - Real-time face detection using MediaPipe BlazeFace
+                       - Progressive auto-recording with quality analysis
+                       - Face quality metrics and validation
+                       - Security monitoring and device validation
+                       - Customizable UI overlays and instructions
+                       - Video recording and snapshot capture
+                       DESC
+
+  spec.homepage      = "https://github.com/BrunoSolis5/JAAKFaceDetectorIOS"
+  spec.license       = { :type => "MIT", :file => "LICENSE" }
+  spec.author        = { "Diego Bruno" => "your-email@example.com" }
+  
+  spec.platform      = :ios, "12.0"
+  spec.swift_version = "5.0"
+  
+  spec.source        = { :git => "https://github.com/BrunoSolis5/JAAKFaceDetectorIOS.git", :tag => "#{spec.version}" }
+  
+  spec.source_files  = "JAAKFaceDetector/**/*.swift"
+  spec.exclude_files = "JAAKFaceDetector/Info.plist"
+  
+  spec.resource_bundles = {
+    'JAAKFaceDetector' => ['JAAKFaceDetector/Resources/**/*']
+  }
+  
+  spec.frameworks = 'UIKit', 'AVFoundation', 'Vision', 'CoreML'
+  
+  # MediaPipe dependency
+  spec.dependency 'MediaPipeTasksVision', '~> 0.10.3'
+  
+  # Build settings
+  spec.requires_arc = true
+  spec.static_framework = true
+  
+  spec.pod_target_xcconfig = {
+    'SWIFT_VERSION' => '5.0',
+    'IPHONEOS_DEPLOYMENT_TARGET' => '12.0',
+    'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386'
+  }
+  
+  spec.user_target_xcconfig = {
+    'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386'
+  }
+end

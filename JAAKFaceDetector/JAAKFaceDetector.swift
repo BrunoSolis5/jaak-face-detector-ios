@@ -470,7 +470,7 @@ extension JAAKFaceDetectorSDK: JAAKSecurityMonitorDelegate {
             stopDetection()
             
             let error = JAAKFaceDetectorError(
-                label: "Security threat detected: \(event.message)",
+                label: "Security threat detected: \(event.description)",
                 code: "SECURITY_THREAT",
                 details: event
             )
@@ -480,7 +480,7 @@ extension JAAKFaceDetectorSDK: JAAKSecurityMonitorDelegate {
         case .medium:
             // Log medium severity events but continue operation
             let error = JAAKFaceDetectorError(
-                label: "Security warning: \(event.message)",
+                label: "Security warning: \(event.description)",
                 code: "SECURITY_WARNING",
                 details: event
             )
