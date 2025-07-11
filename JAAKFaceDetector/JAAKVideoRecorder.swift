@@ -48,6 +48,7 @@ internal class JAAKVideoRecorder: NSObject {
         startRecordingTimer(cameraManager: cameraManager, completion: completion)
         
         // Notify delegate
+        print("🎬 [VideoRecorder] Recording started, notifying delegate: \(String(describing: delegate))")
         delegate?.videoRecorder(self, didStartRecording: outputURL)
     }
     

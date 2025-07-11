@@ -34,7 +34,7 @@ public struct JAAKFaceDetectorConfiguration {
     public var videoDuration: TimeInterval = 4.0
     public var enableMicrophone: Bool = false
     public var cameraPosition: AVCaptureDevice.Position = .back
-    public var videoQuality: AVCaptureSession.Preset = .high
+    public var videoQuality: AVCaptureSession.Preset = .photo
     
     // Face Detection Settings
     public var disableFaceDetection: Bool = false

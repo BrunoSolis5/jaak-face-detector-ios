@@ -186,7 +186,7 @@ internal class JAAKProgressiveRecorder {
     private func analyzeFrameQuality(_ detection: Detection, sampleBuffer: CMSampleBuffer) -> Float {
         guard let analyzer = faceQualityAnalyzer else { return 0.0 }
         
-        return analyzer.analyzeQuality(detection: detection, sampleBuffer: sampleBuffer)
+        return analyzer.analyzeQuality(detection: detection)
     }
     
     private func shouldTriggerRecording(qualityScore: Float, detection: Detection, attemptNumber: Int) -> Bool {

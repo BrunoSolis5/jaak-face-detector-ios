@@ -41,13 +41,12 @@ internal class JAAKCameraManager: NSObject {
             try setupMicrophoneInput()
         }
         
-        // Setup video output
-        try setupVideoOutput()
+        // Setup video output first
+        try setupVideoOutput(with: configuration)
         
-        // Setup movie file output for recording
-        // Temporarily disabled to test if it conflicts with video data output
+        // TODO: Temporarily disable MovieFileOutput to test if it's causing conflicts
         // try setupMovieFileOutput()
-        print("⚠️ [CameraManager] MovieFileOutput temporarily disabled for testing")
+        // print("✅ [CameraManager] MovieFileOutput setup completed")
         
         captureSession.commitConfiguration()
         print("✅ [CameraManager] Capture session configuration completed")
@@ -100,7 +99,18 @@ internal class JAAKCameraManager: NSObject {
                     print("🔗 [CameraManager] Connection status: enabled=\(connection.isEnabled), active=\(connection.isActive)")
                     
                     if connection.isEnabled && !connection.isActive {
-                        print("⚡ [CameraManager] Connection is enabled but not active")
+                        print("⚡ [CameraManager] Connection is enabled but not active - forcing activation...")
+                        
+                        // Try to force connection activation by setting video orientation
+                        if connection.isVideoOrientationSupported {
+                            connection.videoOrientation = .portrait
+                            print("🔧 [CameraManager] Set video orientation to force activation")
+                        }
+                        
+                        // Wait a bit and check again
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            print("🔍 [CameraManager] Rechecking connection after forcing activation: active=\(connection.isActive)")
+                        }
                         
                         // Check connection properties
                         print("🔧 [CameraManager] Connection input ports: \(connection.inputPorts.count)")
@@ -230,23 +240,34 @@ internal class JAAKCameraManager: NSObject {
         }
     }
     
-    private func setupVideoOutput() throws {
-        print("📹 [CameraManager] Setting up video output...")
+    private func setupVideoOutput(with configuration: JAAKFaceDetectorConfiguration) throws {
+        print("📹 [CameraManager] Setting up video output following MediaPipe pattern...")
         let output = AVCaptureVideoDataOutput()
         
-        // Configure video settings first
-        output.videoSettings = [
-            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
-        ]
-        
-        // Set delegate immediately since we don't have MovieFileOutput conflict
-        output.setSampleBufferDelegate(self, queue: videoDataOutputQueue)
-        print("📹 [CameraManager] Video output configured with delegate: \(String(describing: output.sampleBufferDelegate))")
+        // Follow MediaPipe example exactly
+        let sampleBufferQueue = DispatchQueue(label: "sampleBufferQueue")
+        output.setSampleBufferDelegate(self, queue: sampleBufferQueue)
+        output.alwaysDiscardsLateVideoFrames = true
+        output.videoSettings = [String(kCVPixelBufferPixelFormatTypeKey): kCMPixelFormat_32BGRA]
         
         if captureSession.canAddOutput(output) {
             captureSession.addOutput(output)
             videoOutput = output
             print("✅ [CameraManager] Video output added to session successfully")
+            
+            // Set video orientation immediately like MediaPipe example
+            output.connection(with: .video)?.videoOrientation = .portrait
+            print("📱 [CameraManager] Set video orientation to portrait")
+            
+            // Handle mirroring for front camera like MediaPipe example
+            if output.connection(with: .video)?.isVideoOrientationSupported == true &&
+               configuration.cameraPosition == .front {
+                output.connection(with: .video)?.isVideoMirrored = true
+                print("🪞 [CameraManager] Set video mirroring for front camera")
+            }
+            
+            print("🔗 [CameraManager] Video connection configured successfully")
+            
         } else {
             print("❌ [CameraManager] Cannot add video output to session")
             throw JAAKFaceDetectorError(

@@ -27,12 +27,16 @@ public class JAAKFaceDetectorSDK: NSObject {
     private var securityMonitor: JAAKSecurityMonitor?
     private var progressiveRecorder: JAAKProgressiveRecorder?
     
+    // Background processing queue like MediaPipe example
+    private let backgroundQueue = DispatchQueue(label: "com.jaak.facedetector.backgroundQueue", qos: .userInitiated)
+    
     // UI Components
     private var previewView: UIView?
     private var faceTrackingOverlay: JAAKFaceTrackingOverlay?
     private var recordingTimer: JAAKRecordingTimer?
     private var instructionView: JAAKInstructionView?
     private var instructionController: JAAKInstructionController?
+    
     
     // MARK: - Initialization
     
@@ -56,14 +60,26 @@ public class JAAKFaceDetectorSDK: NSObject {
         try checkPermissions()
         
         do {
-            // Setup camera
+            // Setup camera only if not already set up
             guard let cameraManager = cameraManager else {
                 throw JAAKFaceDetectorError(label: "Camera manager not initialized", code: "CAMERA_MANAGER_NIL")
             }
-            try cameraManager.setupCaptureSession(with: configuration)
             
-            // Load models
-            try loadModels()
+            // Check if session is already configured
+            let captureSession = cameraManager.getCaptureSession()
+            if captureSession.inputs.isEmpty {
+                print("🔧 [FaceDetectorSDK] Camera session not configured, setting up...")
+                try cameraManager.setupCaptureSession(with: configuration)
+            } else {
+                print("✅ [FaceDetectorSDK] Camera session already configured, skipping setup")
+            }
+            
+            // Load models if not already loaded
+            if status != .loaded {
+                try loadModels()
+            } else {
+                print("✅ [FaceDetectorSDK] Models already loaded, skipping...")
+            }
             
             // Start camera
             print("🎥 [FaceDetectorSDK] About to start camera session...")
@@ -184,7 +200,39 @@ public class JAAKFaceDetectorSDK: NSObject {
     /// - Returns: AVCaptureVideoPreviewLayer or nil if not available
     public func getCameraPreviewLayer() -> AVCaptureVideoPreviewLayer? {
         guard let session = cameraManager?.getCaptureSession() else { return nil }
-        return AVCaptureVideoPreviewLayer(session: session)
+        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
+        
+        // Configure preview layer to auto-adjust to device orientation
+        previewLayer.videoGravity = .resizeAspectFill
+        
+        // Set initial orientation based on current device orientation
+        updatePreviewLayerOrientation(previewLayer)
+        
+        return previewLayer
+    }
+    
+    /// Update preview layer orientation based on device orientation
+    private func updatePreviewLayerOrientation(_ previewLayer: AVCaptureVideoPreviewLayer) {
+        guard let connection = previewLayer.connection, connection.isVideoOrientationSupported else { return }
+        
+        let currentOrientation = UIDevice.current.orientation
+        let videoOrientation: AVCaptureVideoOrientation
+        
+        switch currentOrientation {
+        case .portrait:
+            videoOrientation = .portrait
+        case .portraitUpsideDown:
+            videoOrientation = .portraitUpsideDown
+        case .landscapeLeft:
+            videoOrientation = .landscapeRight  // Camera is rotated 180° relative to device
+        case .landscapeRight:
+            videoOrientation = .landscapeLeft   // Camera is rotated 180° relative to device
+        default:
+            videoOrientation = .portrait
+        }
+        
+        connection.videoOrientation = videoOrientation
+        print("🔄 [JAAKFaceDetector] Preview orientation updated to: \(videoOrientation.rawValue)")
     }
     
     /// Get capture session
@@ -252,14 +300,37 @@ public class JAAKFaceDetectorSDK: NSObject {
     /// Create preview view for camera feed
     /// - Returns: UIView containing camera preview
     public func createPreviewView() -> UIView {
-        let view = UIView()
+        let view = CameraPreviewView()
         view.backgroundColor = .black
+        
+        // Setup camera session first to ensure preview layer can be created
+        if cameraManager == nil {
+            cameraManager = JAAKCameraManager()
+            cameraManager?.delegate = self
+        }
+        
+        do {
+            try cameraManager?.setupCaptureSession(with: configuration)
+            
+            // Load models to ensure face detection is ready
+            try loadModels()
+            
+            cameraManager?.startSession()
+            print("✅ [JAAKFaceDetector] Camera session setup, models loaded, and session started for preview")
+        } catch {
+            print("❌ [JAAKFaceDetector] Failed to setup camera session for preview: \(error)")
+        }
         
         // Add camera preview layer
         if let previewLayer = getCameraPreviewLayer() {
+            // Set initial frame - will be updated in layoutSubviews
             previewLayer.frame = view.bounds
-            previewLayer.videoGravity = .resizeAspectFill
+            previewLayer.videoGravity = .resizeAspect
             view.layer.addSublayer(previewLayer)
+            
+            print("✅ [JAAKFaceDetector] Preview layer added to view with frame: \(view.bounds)")
+        } else {
+            print("❌ [JAAKFaceDetector] Failed to get camera preview layer")
         }
         
         // Add face tracking overlay
@@ -267,6 +338,9 @@ public class JAAKFaceDetectorSDK: NSObject {
             faceTrackingOverlay.frame = view.bounds
             faceTrackingOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             view.addSubview(faceTrackingOverlay)
+            print("✅ [JAAKFaceDetector] Face tracking overlay added to view with frame: \(view.bounds)")
+        } else {
+            print("⚠️ [JAAKFaceDetector] Face tracking overlay is nil, not adding to view")
         }
         
         // Add recording timer
@@ -282,6 +356,9 @@ public class JAAKFaceDetectorSDK: NSObject {
             )
             
             view.addSubview(recordingTimer)
+            print("✅ [JAAKFaceDetector] Recording timer added to view with frame: \(recordingTimer.frame)")
+        } else {
+            print("⚠️ [JAAKFaceDetector] Recording timer is nil, not adding to view")
         }
         
         // Add instruction view
@@ -346,10 +423,16 @@ public class JAAKFaceDetectorSDK: NSObject {
         // Initialize UI components
         if !configuration.hideFaceTracker {
             faceTrackingOverlay = JAAKFaceTrackingOverlay(configuration: configuration.faceTrackerStyles)
+            print("✅ [FaceDetectorSDK] Face tracking overlay created")
+        } else {
+            print("⚠️ [FaceDetectorSDK] Face tracking overlay hidden by configuration")
         }
         
         if !configuration.hideTimer {
             recordingTimer = JAAKRecordingTimer(configuration: configuration.timerStyles)
+            print("✅ [FaceDetectorSDK] Recording timer created: \(String(describing: recordingTimer))")
+        } else {
+            print("⚠️ [FaceDetectorSDK] Recording timer hidden by configuration")
         }
         
         // Initialize instruction components
@@ -398,9 +481,13 @@ public class JAAKFaceDetectorSDK: NSObject {
 
 extension JAAKFaceDetectorSDK: JAAKCameraManagerDelegate {
     func cameraManager(_ manager: JAAKCameraManager, didOutput sampleBuffer: CMSampleBuffer) {
-        // Process frame for face detection
-        print("📹 [FaceDetectorSDK] Received frame from camera, forwarding to face detection engine")
-        faceDetectionEngine?.processVideoFrame(sampleBuffer)
+        // Process frame for face detection using background queue like MediaPipe example
+        print("📹 [FaceDetectorSDK] Received frame from camera, processing on background queue")
+        let currentTimeMs = Date().timeIntervalSince1970 * 1000
+        
+        backgroundQueue.async { [weak self] in
+            self?.faceDetectionEngine?.processVideoFrame(sampleBuffer, timestamp: Int(currentTimeMs))
+        }
     }
     
     func cameraManager(_ manager: JAAKCameraManager, didFinishRecordingTo outputURL: URL) {
@@ -415,16 +502,32 @@ extension JAAKFaceDetectorSDK: JAAKCameraManagerDelegate {
 // MARK: - JAAKFaceDetectionEngineDelegate
 
 extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
-    func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didDetectFace message: JAAKFaceDetectionMessage, boundingBox: CGRect) {
+    func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didDetectFace message: JAAKFaceDetectionMessage, boundingBox: CGRect, videoNativeSize: CGSize) {
         print("🎯 [FaceDetectorSDK] Face detection delegate called: \(message.label)")
         
-        // Update face tracking overlay
-        faceTrackingOverlay?.updateFaceFrame(boundingBox)
-        faceTrackingOverlay?.setValidationState(message.correctPosition)
+        // Update overlay with image dimensions
+        faceTrackingOverlay?.setImageDimensions(width: videoNativeSize.width, height: videoNativeSize.height)
+        
+        // Update face tracking overlay following MediaPipe pattern
+        if message.faceExists && !boundingBox.isEmpty {
+            let confidence: Float = 0.9 // Default confidence, can be extracted from MediaPipe detection
+            faceTrackingOverlay?.updateFaceDetection(
+                boundingBox: boundingBox,
+                isValid: message.correctPosition,
+                confidence: confidence
+            )
+            print("👤 [FaceDetectorSDK] Face tracking overlay updated and shown")
+        } else {
+            // Clear detections when no face is detected
+            faceTrackingOverlay?.clearDetections()
+            faceTrackingOverlay?.notifyNoFaceDetected()
+            print("👤 [FaceDetectorSDK] No face detected (faceExists: \(message.faceExists), boundingBox: \(boundingBox)), overlay cleared")
+        }
         
         // Handle auto-recording
         if configuration.autoRecorder && message.faceExists && message.correctPosition && status == .running {
             if let videoRecorder = videoRecorder, !videoRecorder.isRecording(), cameraManager != nil {
+                print("🎬 [FaceDetectorSDK] Auto-recording triggered - starting video recording")
                 recordVideo { result in
                     switch result {
                     case .success(let fileResult):
@@ -458,8 +561,10 @@ extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
 
 extension JAAKFaceDetectorSDK: JAAKVideoRecorderDelegate {
     func videoRecorder(_ recorder: JAAKVideoRecorder, didStartRecording outputURL: URL) {
+        print("🎬 [FaceDetectorSDK] Video recorder started, starting timer with duration: \(configuration.videoDuration)")
         updateStatus(.recording)
         recordingTimer?.startTimer(duration: configuration.videoDuration)
+        print("🎬 [FaceDetectorSDK] Timer start command sent to recordingTimer: \(String(describing: recordingTimer))")
     }
     
     func videoRecorder(_ recorder: JAAKVideoRecorder, didUpdateProgress progress: Float) {
@@ -614,3 +719,66 @@ extension JAAKFaceDetectorSDK: JAAKProgressiveRecorderDelegate {
         }
     }
 }
+
+// MARK: - Camera Preview View
+
+/// Custom UIView subclass for proper camera preview layout with auto-rotation
+internal class CameraPreviewView: UIView {
+    
+    private var previewLayer: AVCaptureVideoPreviewLayer?
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        // Update all sublayers to match the new bounds
+        layer.sublayers?.forEach { sublayer in
+            if let previewLayer = sublayer as? AVCaptureVideoPreviewLayer {
+                previewLayer.frame = bounds
+                self.previewLayer = previewLayer
+                
+                // Update orientation when layout changes (device rotation)
+                updatePreviewOrientation()
+                
+                print("📐 [CameraPreviewView] Updated preview layer frame to: \(bounds)")
+            } else {
+                // Update other sublayers as well
+                sublayer.frame = bounds
+            }
+        }
+        
+        // Update all subviews
+        subviews.forEach { subview in
+            if subview.autoresizingMask.contains(.flexibleWidth) && subview.autoresizingMask.contains(.flexibleHeight) {
+                subview.frame = bounds
+            }
+        }
+    }
+    
+    private func updatePreviewOrientation() {
+        guard let previewLayer = previewLayer,
+              let connection = previewLayer.connection,
+              connection.isVideoOrientationSupported else { return }
+        
+        let currentOrientation = UIDevice.current.orientation
+        let videoOrientation: AVCaptureVideoOrientation
+        
+        switch currentOrientation {
+        case .portrait:
+            videoOrientation = .portrait
+        case .portraitUpsideDown:
+            videoOrientation = .portraitUpsideDown
+        case .landscapeLeft:
+            videoOrientation = .landscapeRight  // Camera is rotated 180° relative to device
+        case .landscapeRight:
+            videoOrientation = .landscapeLeft   // Camera is rotated 180° relative to device
+        default:
+            videoOrientation = .portrait
+        }
+        
+        if connection.videoOrientation != videoOrientation {
+            connection.videoOrientation = videoOrientation
+            print("🔄 [CameraPreviewView] Preview orientation updated to: \(videoOrientation.rawValue)")
+        }
+    }
+}
+

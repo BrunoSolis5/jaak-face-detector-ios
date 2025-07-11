@@ -1,15 +1,30 @@
 import UIKit
 
 /// Face tracking overlay view for showing face detection feedback
+/// Following MediaPipe official iOS implementation pattern
 internal class JAAKFaceTrackingOverlay: UIView {
     
     // MARK: - Properties
     
-    private let faceBox = UIView()
-    private let faceShape = CAShapeLayer()
     private var configuration: JAAKFaceTrackerStyles
-    private var currentFaceFrame: CGRect = .zero
-    private var isValidFace: Bool = false
+    private var currentDetections: [FaceDetection] = []
+    private var hideTimer: Timer?
+    private var lastFaceDetectionTime: Date = Date()
+    
+    // Image dimensions for coordinate transformation (MediaPipe pattern)
+    private var imageWidth: CGFloat = 0
+    private var imageHeight: CGFloat = 0
+    
+    // Overlay configuration
+    private let lineWidth: CGFloat = 3.0
+    private let cornerRadius: CGFloat = 8.0
+    
+    // Face detection structure (following MediaPipe pattern)
+    struct FaceDetection {
+        let boundingBox: CGRect
+        let isValid: Bool
+        let confidence: Float
+    }
     
     // MARK: - Initialization
     
@@ -27,18 +42,52 @@ internal class JAAKFaceTrackingOverlay: UIView {
     
     // MARK: - Public Methods
     
-    /// Update the face tracking frame
-    /// - Parameter frame: normalized face bounds (0.0 to 1.0)
-    func updateFaceFrame(_ frame: CGRect) {
-        currentFaceFrame = frame
-        updateFaceOverlay()
+    /// Set image dimensions for coordinate transformation (MediaPipe pattern)
+    /// - Parameters:
+    ///   - width: Image width
+    ///   - height: Image height
+    func setImageDimensions(width: CGFloat, height: CGFloat) {
+        imageWidth = width
+        imageHeight = height
+        print("📐 [FaceTrackingOverlay] Image dimensions set: \(width) x \(height)")
     }
     
-    /// Set the validation state of the detected face
-    /// - Parameter isValid: true if face is in correct position
-    func setValidationState(_ isValid: Bool) {
-        isValidFace = isValid
-        updateFaceOverlay()
+    /// Update face detections (MediaPipe pattern)
+    /// - Parameters:
+    ///   - boundingBox: Detection bounding box
+    ///   - isValid: Whether face is in valid position
+    ///   - confidence: Detection confidence
+    func updateFaceDetection(boundingBox: CGRect, isValid: Bool, confidence: Float) {
+        // Only update if frame has valid dimensions
+        guard boundingBox.width > 0 && boundingBox.height > 0 else {
+            print("⚠️ [FaceTrackingOverlay] Invalid bounding box received: \(boundingBox)")
+            clearDetections()
+            return
+        }
+        
+        let detection = FaceDetection(
+            boundingBox: boundingBox,
+            isValid: isValid,
+            confidence: confidence
+        )
+        
+        currentDetections = [detection]
+        lastFaceDetectionTime = Date()
+        setNeedsDisplay()
+        
+        // Reset hide timer when face is detected
+        resetHideTimer()
+        
+        // Show overlay if hidden
+        if isHidden {
+            show()
+        }
+    }
+    
+    /// Clear all detections
+    func clearDetections() {
+        currentDetections = []
+        setNeedsDisplay()
     }
     
     /// Show the face tracking overlay
@@ -63,7 +112,39 @@ internal class JAAKFaceTrackingOverlay: UIView {
     /// - Parameter configuration: new face tracker styles
     func updateConfiguration(_ configuration: JAAKFaceTrackerStyles) {
         self.configuration = configuration
-        updateFaceOverlay()
+        setNeedsDisplay()
+    }
+    
+    /// Notify that no face was detected (for delayed hiding)
+    func notifyNoFaceDetected() {
+        // Clear current detections
+        currentDetections = []
+        
+        // Only start hide timer if we haven't seen a face recently
+        let timeSinceLastDetection = Date().timeIntervalSince(lastFaceDetectionTime)
+        if timeSinceLastDetection > 0.5 { // 500ms delay
+            scheduleHideTimer()
+        } else {
+            // Hide immediately if no valid detections exist
+            if currentDetections.isEmpty {
+                hide()
+            }
+            print("👤 [FaceTrackingOverlay] No face detected but recent detection exists, detections cleared")
+        }
+    }
+    
+    // MARK: - UIView Overrides
+    
+    override func draw(_ rect: CGRect) {
+        guard let context = UIGraphicsGetCurrentContext() else { return }
+        
+        // Clear the context
+        context.clear(rect)
+        
+        // Draw all face detections
+        for detection in currentDetections {
+            drawFaceDetection(detection, in: context)
+        }
     }
     
     // MARK: - Private Methods
@@ -72,103 +153,185 @@ internal class JAAKFaceTrackingOverlay: UIView {
         backgroundColor = .clear
         isUserInteractionEnabled = false
         
-        // Setup face shape layer
-        faceShape.fillColor = UIColor.clear.cgColor
-        faceShape.lineWidth = 3.0
-        faceShape.lineJoin = .round
-        layer.addSublayer(faceShape)
-        
-        // Initial state
-        hide()
+        // Initial state - start hidden but ready to show
+        alpha = 0.0
+        isHidden = true
     }
     
-    private func updateFaceOverlay() {
-        guard !currentFaceFrame.isEmpty else {
-            hide()
+    private func drawFaceDetection(_ detection: FaceDetection, in context: CGContext) {
+        // Transform MediaPipe coordinates to view coordinates
+        let transformedRect = rectAfterApplyingBoundsAdjustment(
+            originalRect: detection.boundingBox,
+            imageSize: CGSize(width: imageWidth, height: imageHeight),
+            viewSize: bounds.size
+        )
+        
+        // Validate that the transformed frame is reasonable
+        guard transformedRect.width > 0 && transformedRect.height > 0 &&
+              transformedRect.minX >= 0 && transformedRect.minY >= 0 &&
+              transformedRect.maxX <= bounds.width && transformedRect.maxY <= bounds.height else {
+            print("⚠️ [FaceTrackingOverlay] Invalid transformed frame: \(transformedRect)")
             return
         }
         
-        // Convert normalized coordinates to view coordinates
-        let viewFrame = convertNormalizedFrameToView(currentFaceFrame)
+        // Set drawing properties
+        context.setLineWidth(lineWidth)
+        let strokeColor = detection.isValid ? configuration.validColor : configuration.invalidColor
+        context.setStrokeColor(strokeColor.cgColor)
+        context.setFillColor(UIColor.clear.cgColor)
         
-        // Update colors based on validation state
-        let strokeColor = isValidFace ? configuration.validColor : configuration.invalidColor
-        faceShape.strokeColor = strokeColor.cgColor
+        // Draw rounded rectangle
+        let path = UIBezierPath(roundedRect: transformedRect, cornerRadius: cornerRadius)
+        context.addPath(path.cgPath)
+        context.strokePath()
         
-        // Create face outline path
-        let path = createFaceOutlinePath(for: viewFrame)
-        faceShape.path = path
+        print("📐 [FaceTrackingOverlay] Drew detection: \(detection.boundingBox) -> \(transformedRect)")
+    }
+    
+    /// Transform detection coordinates to view coordinates (MediaPipe official pattern)
+    /// - Parameters:
+    ///   - originalRect: Original detection rectangle
+    ///   - imageSize: Size of the image being processed
+    ///   - viewSize: Size of the view
+    /// - Returns: Transformed rectangle in view coordinates
+    private func rectAfterApplyingBoundsAdjustment(
+        originalRect: CGRect,
+        imageSize: CGSize,
+        viewSize: CGSize
+    ) -> CGRect {
         
-        // Show overlay if hidden
-        if isHidden {
-            show()
+        guard imageSize.width > 0 && imageSize.height > 0 else {
+            print("⚠️ [FaceTrackingOverlay] Invalid image size: \(imageSize)")
+            return originalRect
         }
         
-        // Animate the change
-        CATransaction.begin()
-        CATransaction.setAnimationDuration(0.2)
-        faceShape.path = path
-        CATransaction.commit()
+        // Calculate scale factors
+        let scaleX = viewSize.width / imageSize.width
+        let scaleY = viewSize.height / imageSize.height
+        
+        // Use the same scale for both dimensions to maintain aspect ratio
+        // This matches AVLayerVideoGravityResizeAspect behavior
+        let scale = min(scaleX, scaleY)
+        
+        // Calculate the scaled image size
+        let scaledImageSize = CGSize(
+            width: imageSize.width * scale,
+            height: imageSize.height * scale
+        )
+        
+        // Calculate offset to center the scaled image in the view
+        let offsetX = (viewSize.width - scaledImageSize.width) / 2
+        let offsetY = (viewSize.height - scaledImageSize.height) / 2
+        
+        // Apply coordinate system transformation based on current device orientation
+        let currentOrientation = UIDevice.current.orientation
+        let (rotatedX, rotatedY, rotatedWidth, rotatedHeight) = transformCoordinatesForOrientation(
+            originalRect: originalRect,
+            imageSize: imageSize,
+            orientation: currentOrientation
+        )
+        
+        // Transform the rotated rectangle
+        let transformedRect = CGRect(
+            x: rotatedX * scale + offsetX,
+            y: rotatedY * scale + offsetY,
+            width: rotatedWidth * scale,
+            height: rotatedHeight * scale
+        )
+        
+        print("📐 [FaceTrackingOverlay] Original: \(originalRect)")
+        print("📐 [FaceTrackingOverlay] Rotated: (\(rotatedX), \(rotatedY), \(rotatedWidth), \(rotatedHeight))")
+        print("📐 [FaceTrackingOverlay] Image size: \(imageSize), View size: \(viewSize)")
+        print("📐 [FaceTrackingOverlay] Scale: \(scale), Offset: (\(offsetX), \(offsetY))")
+        print("📐 [FaceTrackingOverlay] Transformed: \(transformedRect)")
+        
+        return transformedRect
     }
     
-    private func convertNormalizedFrameToView(_ normalizedFrame: CGRect) -> CGRect {
-        let viewSize = bounds.size
+    /// Transform coordinates based on device orientation (like native camera app)
+    private func transformCoordinatesForOrientation(
+        originalRect: CGRect,
+        imageSize: CGSize,
+        orientation: UIDeviceOrientation
+    ) -> (x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat) {
         
-        // Vision framework uses bottom-left origin, UIKit uses top-left
-        let x = normalizedFrame.minX * viewSize.width
-        let y = (1.0 - normalizedFrame.maxY) * viewSize.height
-        let width = normalizedFrame.width * viewSize.width
-        let height = normalizedFrame.height * viewSize.height
-        
-        return CGRect(x: x, y: y, width: width, height: height)
-    }
-    
-    private func createFaceOutlinePath(for frame: CGRect) -> CGPath {
-        // Create a rounded rectangle for the face outline
-        let cornerRadius: CGFloat = 8.0
-        let path = UIBezierPath(roundedRect: frame, cornerRadius: cornerRadius)
-        
-        // Add corner indicators for better visibility
-        addCornerIndicators(to: path, frame: frame)
-        
-        return path.cgPath
-    }
-    
-    private func addCornerIndicators(to path: UIBezierPath, frame: CGRect) {
-        let indicatorLength: CGFloat = 20.0
-        let cornerRadius: CGFloat = 8.0
-        
-        // Top-left corner
-        path.move(to: CGPoint(x: frame.minX, y: frame.minY + cornerRadius + indicatorLength))
-        path.addLine(to: CGPoint(x: frame.minX, y: frame.minY + cornerRadius))
-        path.addLine(to: CGPoint(x: frame.minX + cornerRadius, y: frame.minY))
-        path.addLine(to: CGPoint(x: frame.minX + cornerRadius + indicatorLength, y: frame.minY))
-        
-        // Top-right corner
-        path.move(to: CGPoint(x: frame.maxX - cornerRadius - indicatorLength, y: frame.minY))
-        path.addLine(to: CGPoint(x: frame.maxX - cornerRadius, y: frame.minY))
-        path.addLine(to: CGPoint(x: frame.maxX, y: frame.minY + cornerRadius))
-        path.addLine(to: CGPoint(x: frame.maxX, y: frame.minY + cornerRadius + indicatorLength))
-        
-        // Bottom-right corner
-        path.move(to: CGPoint(x: frame.maxX, y: frame.maxY - cornerRadius - indicatorLength))
-        path.addLine(to: CGPoint(x: frame.maxX, y: frame.maxY - cornerRadius))
-        path.addLine(to: CGPoint(x: frame.maxX - cornerRadius, y: frame.maxY))
-        path.addLine(to: CGPoint(x: frame.maxX - cornerRadius - indicatorLength, y: frame.maxY))
-        
-        // Bottom-left corner
-        path.move(to: CGPoint(x: frame.minX + cornerRadius + indicatorLength, y: frame.maxY))
-        path.addLine(to: CGPoint(x: frame.minX + cornerRadius, y: frame.maxY))
-        path.addLine(to: CGPoint(x: frame.minX, y: frame.maxY - cornerRadius))
-        path.addLine(to: CGPoint(x: frame.minX, y: frame.maxY - cornerRadius - indicatorLength))
+        switch orientation {
+        case .portrait:
+            // Corrected transform for portrait (fix down-left offset)
+            return (
+                x: originalRect.origin.y,
+                y: imageSize.width - originalRect.origin.x - originalRect.width,
+                width: originalRect.height,
+                height: originalRect.width
+            )
+            
+        case .portraitUpsideDown:
+            // 180-degree rotation
+            return (
+                x: originalRect.origin.y,
+                y: imageSize.width - originalRect.origin.x - originalRect.width,
+                width: originalRect.height,
+                height: originalRect.width
+            )
+            
+        case .landscapeLeft:
+            // 90-degree clockwise
+            return (
+                x: originalRect.origin.x,
+                y: originalRect.origin.y,
+                width: originalRect.width,
+                height: originalRect.height
+            )
+            
+        case .landscapeRight:
+            // 90-degree counter-clockwise
+            return (
+                x: imageSize.width - originalRect.origin.x - originalRect.width,
+                y: imageSize.height - originalRect.origin.y - originalRect.height,
+                width: originalRect.width,
+                height: originalRect.height
+            )
+            
+        default:
+            // Default to portrait
+            return (
+                x: imageSize.height - originalRect.origin.y - originalRect.height,
+                y: originalRect.origin.x,
+                width: originalRect.height,
+                height: originalRect.width
+            )
+        }
     }
     
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        // Update face overlay when view bounds change
-        if !currentFaceFrame.isEmpty {
-            updateFaceOverlay()
+        // Redraw overlays when view bounds change
+        setNeedsDisplay()
+    }
+    
+    // MARK: - Timer Management
+    
+    private func resetHideTimer() {
+        hideTimer?.invalidate()
+        hideTimer = nil
+    }
+    
+    private func scheduleHideTimer() {
+        hideTimer?.invalidate()
+        
+        // If no current detections, hide immediately
+        if currentDetections.isEmpty {
+            hide()
+            return
         }
+        
+        hideTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
+            self?.hide()
+        }
+    }
+    
+    deinit {
+        hideTimer?.invalidate()
     }
 }
