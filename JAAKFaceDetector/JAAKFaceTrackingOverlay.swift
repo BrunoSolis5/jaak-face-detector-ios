@@ -156,6 +156,22 @@ internal class JAAKFaceTrackingOverlay: UIView {
         // Initial state - start hidden but ready to show
         alpha = 0.0
         isHidden = true
+        
+        // Listen for orientation changes like MediaPipe example
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(orientationDidChange),
+            name: UIDevice.orientationDidChangeNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func orientationDidChange() {
+        print("📐 [FaceTrackingOverlay] Orientation changed, redrawing overlays")
+        // Clear current detections and redraw
+        DispatchQueue.main.async {
+            self.setNeedsDisplay()
+        }
     }
     
     private func drawFaceDetection(_ detection: FaceDetection, in context: CGContext) {
@@ -294,5 +310,6 @@ internal class JAAKFaceTrackingOverlay: UIView {
     
     deinit {
         hideTimer?.invalidate()
+        NotificationCenter.default.removeObserver(self)
     }
 }

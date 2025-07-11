@@ -243,8 +243,9 @@ internal class JAAKFaceDetectionEngine: NSObject {
             let normalizedBoundingBox = self.normalizeBoundingBox(primaryFace.boundingBox)
             print("🔄 [FaceDetectionEngine] Normalized bounding box: \(normalizedBoundingBox)")
             print("🔄 [FaceDetectionEngine] Calling delegate with message: \(message.label)")
-            let videoNativeSize = CGSize(width: self.videoNativeWidth, height: self.videoNativeHeight)
-            self.delegate?.faceDetectionEngine(self, didDetectFace: message, boundingBox: normalizedBoundingBox, videoNativeSize: videoNativeSize)
+            let orientationAdjustedSize = self.getOrientationAdjustedVideoSize()
+            print("📐 [FaceDetectionEngine] Video size for overlay: \(orientationAdjustedSize)")
+            self.delegate?.faceDetectionEngine(self, didDetectFace: message, boundingBox: normalizedBoundingBox, videoNativeSize: orientationAdjustedSize)
             print("✅ [FaceDetectionEngine] Delegate call completed")
         }
     }
@@ -268,8 +269,8 @@ internal class JAAKFaceDetectionEngine: NSObject {
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            let videoNativeSize = CGSize(width: self.videoNativeWidth, height: self.videoNativeHeight)
-            self.delegate?.faceDetectionEngine(self, didDetectFace: message, boundingBox: .zero, videoNativeSize: videoNativeSize)
+            let orientationAdjustedSize = self.getOrientationAdjustedVideoSize()
+            self.delegate?.faceDetectionEngine(self, didDetectFace: message, boundingBox: .zero, videoNativeSize: orientationAdjustedSize)
         }
     }
     
@@ -386,6 +387,21 @@ internal class JAAKFaceDetectionEngine: NSObject {
     // Store video dimensions for delegate callback
     private var videoNativeWidth: CGFloat = 0
     private var videoNativeHeight: CGFloat = 0
+    
+    /// Get video resolution adjusted for current orientation (MediaPipe pattern)
+    private func getOrientationAdjustedVideoSize() -> CGSize {
+        let minDimension = min(videoNativeWidth, videoNativeHeight)
+        let maxDimension = max(videoNativeWidth, videoNativeHeight)
+        
+        switch UIDevice.current.orientation {
+        case .portrait, .portraitUpsideDown:
+            return CGSize(width: minDimension, height: maxDimension)
+        case .landscapeLeft, .landscapeRight:
+            return CGSize(width: maxDimension, height: minDimension)
+        default:
+            return CGSize(width: minDimension, height: maxDimension)
+        }
+    }
 }
 
 // MARK: - FaceDetectorLiveStreamDelegate

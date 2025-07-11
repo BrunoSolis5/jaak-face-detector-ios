@@ -255,6 +255,11 @@ public class JAAKFaceDetectorSDK: NSObject {
         configuration.cameraPosition = newPosition
         
         try cameraManager.toggleCamera(to: newPosition, configuration: configuration)
+        
+        // Clear overlay detections when camera changes like MediaPipe example
+        DispatchQueue.main.async {
+            self.faceTrackingOverlay?.clearDetections()
+        }
     }
     
     /// Stop video stream
