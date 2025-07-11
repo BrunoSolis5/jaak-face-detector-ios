@@ -1,5 +1,4 @@
 import AVFoundation
-import Vision
 import UIKit
 import MediaPipeTasksVision
 

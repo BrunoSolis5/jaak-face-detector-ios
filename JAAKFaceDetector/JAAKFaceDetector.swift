@@ -1,7 +1,5 @@
 import UIKit
 import AVFoundation
-import Vision
-import CoreML
 import MediaPipeTasksVision
 
 /// Main class for JAAKFaceDetector - AI-powered face detection and recording library
