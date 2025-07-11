@@ -11,6 +11,7 @@ internal class JAAKRecordingTimer: UIView {
     private var configuration: JAAKTimerStyles
     private var currentProgress: Float = 0.0
     private var isRecording: Bool = false
+    private var totalDuration: TimeInterval = 0.0
     
     // MARK: - Initialization
     
@@ -33,6 +34,7 @@ internal class JAAKRecordingTimer: UIView {
     func startTimer(duration: TimeInterval) {
         isRecording = true
         currentProgress = 0.0
+        totalDuration = duration
         
         // Show the timer with animation
         show()
@@ -40,7 +42,7 @@ internal class JAAKRecordingTimer: UIView {
         // Update colors for recording state
         updateColors()
         
-        // Reset progress
+        // Reset progress and show initial countdown
         updateProgress(0.0)
     }
     
@@ -65,9 +67,12 @@ internal class JAAKRecordingTimer: UIView {
         // Update circular progress
         progressLayer.strokeEnd = CGFloat(progress)
         
-        // Update timer text
-        let remainingTime = (1.0 - progress) * 100 // Convert to percentage for display
-        timerLabel.text = String(format: "%.0f", remainingTime)
+        // Calculate remaining time (countdown from total duration to 0)
+        let remainingTime = totalDuration * (1.0 - TimeInterval(progress))
+        
+        // Format time display (show only integer seconds)
+        let remainingSeconds = Int(ceil(remainingTime))
+        timerLabel.text = "\(max(0, remainingSeconds))"
         
         // Animate the progress change
         CATransaction.begin()
@@ -132,7 +137,7 @@ internal class JAAKRecordingTimer: UIView {
         timerLabel.textAlignment = .center
         timerLabel.font = UIFont.systemFont(ofSize: configuration.fontSize, weight: .medium)
         timerLabel.textColor = configuration.textColor
-        timerLabel.text = "100"
+        timerLabel.text = "0"
         addSubview(timerLabel)
         
         // Layout

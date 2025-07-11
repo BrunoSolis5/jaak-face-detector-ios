@@ -168,6 +168,23 @@ public class JAAKFaceDetectorSDK: NSObject {
         videoRecorder.startRecording(with: cameraManager, completion: completion)
     }
     
+    /// Stop current video recording
+    public func stopRecording() {
+        guard let videoRecorder = videoRecorder, let cameraManager = cameraManager else { return }
+        guard videoRecorder.isRecording() else { return }
+        
+        print("⏹️ [FaceDetectorSDK] Stopping video recording")
+        videoRecorder.stopRecording(with: cameraManager)
+        
+        // Stop the timer
+        recordingTimer?.stopTimer()
+        
+        // Reset status if we were recording
+        if status == .recording {
+            updateStatus(.running)
+        }
+    }
+    
     /// Take a snapshot
     /// - Parameter completion: Completion handler with result
     public func takeSnapshot(completion: @escaping (Result<JAAKFileResult, JAAKFaceDetectorError>) -> Void) {
@@ -533,23 +550,44 @@ extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
             print("👤 [FaceDetectorSDK] No face detected (faceExists: \(message.faceExists), boundingBox: \(boundingBox)), overlay cleared")
         }
         
-        // Handle auto-recording
-        if configuration.autoRecorder && message.faceExists && message.correctPosition && status == .running {
-            if let videoRecorder = videoRecorder, !videoRecorder.isRecording(), cameraManager != nil {
-                print("🎬 [FaceDetectorSDK] Auto-recording triggered - starting video recording")
-                recordVideo { result in
-                    switch result {
-                    case .success(let fileResult):
-                        self.delegate?.faceDetector(self, didCaptureFile: fileResult)
-                    case .failure(let error):
-                        self.delegate?.faceDetector(self, didEncounterError: error)
+        // Handle auto-recording with detailed debugging
+        print("🔍 [AutoRecorder Debug] autoRecorder: \(configuration.autoRecorder), status: \(status), faceExists: \(message.faceExists), correctPosition: \(message.correctPosition)")
+        
+        if configuration.autoRecorder && (status == .running || status == .recording) {
+            if message.faceExists && message.correctPosition {
+                // Start recording if not already recording
+                if let videoRecorder = videoRecorder, !videoRecorder.isRecording(), cameraManager != nil {
+                    print("🎬 [FaceDetectorSDK] Auto-recording triggered - starting video recording")
+                    recordVideo { result in
+                        switch result {
+                        case .success(let fileResult):
+                            self.delegate?.faceDetector(self, didCaptureFile: fileResult)
+                        case .failure(let error):
+                            self.delegate?.faceDetector(self, didEncounterError: error)
+                        }
                     }
+                } else {
+                    print("❌ [AutoRecorder Debug] Cannot start recording - videoRecorder: \(videoRecorder != nil), isRecording: \(videoRecorder?.isRecording() ?? false), cameraManager: \(cameraManager != nil)")
+                }
+            } else {
+                // Cancel recording if face is lost during recording
+                if let videoRecorder = videoRecorder, videoRecorder.isRecording() {
+                    print("❌ [FaceDetectorSDK] Face lost during auto-recording - canceling recording")
+                    stopRecording()
+                    updateStatus(.running) // Reset status back to running (not finished)
+                    
+                    // Notify that recording was canceled
+                    let cancelError = JAAKFaceDetectorError(
+                        label: "Auto-recording canceled - face detection lost", 
+                        code: "AUTO_RECORDING_CANCELED"
+                    )
+                    delegate?.faceDetector(self, didEncounterError: cancelError)
                 }
             }
         }
         
         // Update instruction controller with face detection message
-        instructionController?.handleFaceDetectionMessage(message)
+        instructionController?.showCustomInstruction(message)
         
         // Forward to delegate
         delegate?.faceDetector(self, didDetectFace: message)

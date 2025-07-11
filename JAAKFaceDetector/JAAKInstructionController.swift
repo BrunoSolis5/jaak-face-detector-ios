@@ -111,8 +111,21 @@ internal class JAAKInstructionController {
             return .faceDetected
         }
         
-        // For more specific positioning feedback, we'd need more detailed face analysis
-        // For now, we'll use general positioning feedback
+        // Use the specific instruction from the message label
+        let instructionText = message.label.lowercased()
+        
+        if instructionText.contains("closer") {
+            return .faceTooFar
+        } else if instructionText.contains("away") {
+            return .faceToClose
+        } else if instructionText.contains("right") || instructionText.contains("left") || 
+                  instructionText.contains("up") || instructionText.contains("down") {
+            return .faceNotCentered
+        } else if instructionText.contains("turn") || instructionText.contains("face") {
+            return .faceNotStill
+        }
+        
+        // Default fallback
         return .faceNotCentered
     }
     
@@ -158,6 +171,29 @@ internal class JAAKInstructionController {
         
         // Create instruction steps based on trigger
         let instructionText = getInstructionText(for: trigger)
+        let animationName = getAnimationName(for: trigger)
+        
+        // Update instruction view with specific content
+        updateInstructionView(text: instructionText, animation: animationName)
+        
+        // Show the instruction
+        instructionView.showInstructions()
+        
+        // Start auto-hide timer
+        startInstructionTimer()
+    }
+    
+    /// Show instruction with custom message (for direct message display)
+    /// - Parameter message: face detection message with custom text
+    func showCustomInstruction(_ message: JAAKFaceDetectionMessage) {
+        guard configuration.enableInstructions else { return }
+        
+        let trigger = determineTrigger(from: message)
+        currentTrigger = trigger
+        lastInstructionTime = Date()
+        
+        // Use the exact message label as instruction text
+        let instructionText = message.label
         let animationName = getAnimationName(for: trigger)
         
         // Update instruction view with specific content

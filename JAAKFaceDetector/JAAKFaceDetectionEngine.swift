@@ -177,7 +177,6 @@ internal class JAAKFaceDetectionEngine: NSObject {
         
         // Safely access Detection properties with defensive checks
         var confidence: Float = 0.0
-        var isValidPosition = false
         
         // Safely access categories to get confidence
         let categories = primaryFace.categories
@@ -189,11 +188,11 @@ internal class JAAKFaceDetectionEngine: NSObject {
             confidence = 0.9 // Default confidence for detected faces without categories
         }
         
-        // Validate face position and size with defensive checks
-        isValidPosition = validateFacePosition(primaryFace)
+        // Validate face position and generate instructive message
+        let (isValidPosition, instructionMessage) = validateFacePositionWithInstructions(primaryFace)
         
         let message = JAAKFaceDetectionMessage(
-            label: isValidPosition ? "Face detected in correct position" : "Face detected but repositioning needed",
+            label: isValidPosition ? "Perfect! Ready to record" : instructionMessage,
             details: "Face confidence: \(confidence)",
             faceExists: true,
             correctPosition: isValidPosition
@@ -220,7 +219,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
         consecutiveNoFaceFrames += 1
         
         let message = JAAKFaceDetectionMessage(
-            label: "No face detected",
+            label: "Point your face towards the camera",
             details: "Consecutive no-face frames: \(consecutiveNoFaceFrames)",
             faceExists: false,
             correctPosition: false
@@ -281,6 +280,95 @@ internal class JAAKFaceDetectionEngine: NSObject {
             let isValidSize = faceArea >= minimumFacePixelArea
             
             return isValidSize
+        }
+    }
+    
+    /// Validate face position and provide instructive messages
+    /// - Parameter detection: MediaPipe face detection
+    /// - Returns: Tuple with (isValid, instructionMessage)
+    private func validateFacePositionWithInstructions(_ detection: Detection) -> (Bool, String) {
+        let boundingBox = detection.boundingBox
+        
+        // Check if coordinates are normalized or pixel-based
+        let isNormalized = boundingBox.width <= 1.0 && boundingBox.height <= 1.0 &&
+                          boundingBox.origin.x <= 1.0 && boundingBox.origin.y <= 1.0
+        
+        // Validate basic bounds
+        guard boundingBox.width > 0 && boundingBox.height > 0 &&
+              boundingBox.origin.x >= 0 && boundingBox.origin.y >= 0 else {
+            return (false, "Face detection error - please try again")
+        }
+        
+        if isNormalized {
+            // Handle normalized coordinates (0.0 to 1.0)
+            let faceArea = boundingBox.width * boundingBox.height
+            let faceWidth = boundingBox.width
+            let faceHeight = boundingBox.height
+            let centerX = boundingBox.origin.x + boundingBox.width / 2
+            let centerY = boundingBox.origin.y + boundingBox.height / 2
+            
+            // Check face size
+            if faceArea < 0.08 {  // Too small (less than 8% of frame)
+                return (false, "Move closer to the camera")
+            } else if faceArea > 0.45 {  // Too large (more than 45% of frame)
+                return (false, "Move away from the camera")
+            }
+            
+            // Check horizontal position
+            if centerX < 0.3 {
+                return (false, "Move to the right")
+            } else if centerX > 0.7 {
+                return (false, "Move to the left")
+            }
+            
+            // Check vertical position
+            if centerY < 0.25 {
+                return (false, "Move down a bit")
+            } else if centerY > 0.75 {
+                return (false, "Move up a bit")
+            }
+            
+            // Check if face is too wide or too tall (aspect ratio)
+            let aspectRatio = faceWidth / faceHeight
+            if aspectRatio < 0.6 {
+                return (false, "Turn your face towards the camera")
+            } else if aspectRatio > 1.4 {
+                return (false, "Face your camera directly")
+            }
+            
+            // If all checks pass, face is in good position
+            return (true, "Perfect position!")
+            
+        } else {
+            // Handle pixel coordinates - convert to relative checks
+            let videoWidth = max(videoNativeWidth, 100)  // Fallback if not set
+            let videoHeight = max(videoNativeHeight, 100)
+            
+            let relativeArea = (boundingBox.width * boundingBox.height) / (videoWidth * videoHeight)
+            let relativeCenterX = (boundingBox.origin.x + boundingBox.width / 2) / videoWidth
+            let relativeCenterY = (boundingBox.origin.y + boundingBox.height / 2) / videoHeight
+            
+            // Check face size
+            if relativeArea < 0.08 {
+                return (false, "Move closer to the camera")
+            } else if relativeArea > 0.45 {
+                return (false, "Move away from the camera")
+            }
+            
+            // Check position (similar to normalized logic)
+            if relativeCenterX < 0.3 {
+                return (false, "Move to the right")
+            } else if relativeCenterX > 0.7 {
+                return (false, "Move to the left")
+            }
+            
+            if relativeCenterY < 0.25 {
+                return (false, "Move down a bit")
+            } else if relativeCenterY > 0.75 {
+                return (false, "Move up a bit")
+            }
+            
+            return (true, "Perfect position!")
         }
     }
     
