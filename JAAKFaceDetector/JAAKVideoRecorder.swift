@@ -10,7 +10,7 @@ internal class JAAKVideoRecorder: NSObject {
     private var recordingStartTime: Date?
     private var isCurrentlyRecording = false
     
-    private let configuration: JAAKFaceDetectorConfiguration
+    private var configuration: JAAKFaceDetectorConfiguration
     weak var delegate: JAAKVideoRecorderDelegate?
     
     // MARK: - Initialization
@@ -223,6 +223,13 @@ internal class JAAKVideoRecorder: NSObject {
         isCurrentlyRecording = false
         recordingStartTime = nil
         stopRecordingTimer()
+    }
+    
+    /// Update configuration
+    /// - Parameter newConfiguration: new video recorder configuration
+    func updateConfiguration(_ newConfiguration: JAAKFaceDetectorConfiguration) {
+        self.configuration = newConfiguration
+        print("✅ [VideoRecorder] Configuration updated")
     }
 }
 

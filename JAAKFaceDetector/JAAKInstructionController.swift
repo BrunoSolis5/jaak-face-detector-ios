@@ -20,7 +20,7 @@ internal class JAAKInstructionController {
     
     // MARK: - Properties
     
-    private let configuration: JAAKFaceDetectorConfiguration
+    private var configuration: JAAKFaceDetectorConfiguration
     private let instructionView: JAAKInstructionView
     private var currentTrigger: InstructionTrigger?
     private var instructionTimer: Timer?
@@ -267,6 +267,13 @@ internal class JAAKInstructionController {
     
     deinit {
         stopInstructionTimer()
+    }
+    
+    /// Update configuration
+    /// - Parameter newConfiguration: new instruction controller configuration
+    func updateConfiguration(_ newConfiguration: JAAKFaceDetectorConfiguration) {
+        self.configuration = newConfiguration
+        print("✅ [InstructionController] Configuration updated")
     }
 }
 

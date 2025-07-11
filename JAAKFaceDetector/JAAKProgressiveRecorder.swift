@@ -66,7 +66,7 @@ internal class JAAKProgressiveRecorder {
     
     // MARK: - Properties
     
-    private let configuration: JAAKFaceDetectorConfiguration
+    private var configuration: JAAKFaceDetectorConfiguration
     private let videoRecorder: JAAKVideoRecorder
     private let cameraManager: JAAKCameraManager
     
@@ -318,6 +318,13 @@ internal class JAAKProgressiveRecorder {
     static func getSizeThreshold(for attempt: Int) -> Float {
         let index = min(attempt - 1, sizeThresholds.count - 1)
         return sizeThresholds[max(0, index)]
+    }
+    
+    /// Update configuration
+    /// - Parameter newConfiguration: new progressive recorder configuration
+    func updateConfiguration(_ newConfiguration: JAAKFaceDetectorConfiguration) {
+        self.configuration = newConfiguration
+        print("✅ [ProgressiveRecorder] Configuration updated")
     }
 }
 

@@ -54,6 +54,29 @@ public struct JAAKFaceDetectorView: UIViewRepresentable {
         // Update only when necessary
         if !uiView.isSetup {
             setupFaceDetector(for: uiView)
+        } else {
+            // Check if configuration has changed and needs refresh
+            if let currentDetector = uiView.faceDetector, 
+               !configurationMatches(currentDetector.configuration, configuration) {
+                print("🔄 [JAAKFaceDetectorView] Configuration changed, recreating detector...")
+                
+                // Stop current detector
+                currentDetector.stopDetection()
+                
+                // Reset the view
+                uiView.isSetup = false
+                uiView.faceDetector = nil
+                uiView.previewView?.removeFromSuperview()
+                uiView.previewView = nil
+                uiView.internalDelegate = nil
+                
+                // Clear existing content
+                uiView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
+                uiView.subviews.forEach { $0.removeFromSuperview() }
+                
+                // Setup with new configuration
+                setupFaceDetector(for: uiView)
+            }
         }
     }
     
@@ -91,6 +114,16 @@ public struct JAAKFaceDetectorView: UIViewRepresentable {
         view.isSetup = true
         
         print("✅ [JAAKFaceDetectorView] Face detector setup completed")
+    }
+    
+    private func configurationMatches(_ config1: JAAKFaceDetectorConfiguration, _ config2: JAAKFaceDetectorConfiguration) -> Bool {
+        // Only compare properties that require full recreation of the detector
+        // Dynamic properties like hideFaceTracker, hideTimer, etc. will be handled by updateConfiguration
+        return config1.enableMicrophone == config2.enableMicrophone &&
+               config1.cameraPosition == config2.cameraPosition &&
+               config1.videoQuality == config2.videoQuality &&
+               config1.disableFaceDetection == config2.disableFaceDetection &&
+               config1.useOfflineModel == config2.useOfflineModel
     }
     
     // MARK: - Public Methods
@@ -169,6 +202,12 @@ public class JAAKFaceDetectorUIView: UIView {
     @available(iOS 13.0, *)
     public func toggleCamera() throws {
         try faceDetector?.toggleCamera()
+    }
+    
+    /// Restart the face detector
+    @available(iOS 13.0, *)
+    public func restartDetector() throws {
+        try faceDetector?.restartDetection()
     }
 }
 

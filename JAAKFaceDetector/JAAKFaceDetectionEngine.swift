@@ -14,7 +14,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
     
     weak var delegate: JAAKFaceDetectionEngineDelegate?
     
-    private let configuration: JAAKFaceDetectorConfiguration
+    private var configuration: JAAKFaceDetectorConfiguration
     
     // MARK: - Initialization
     
@@ -37,18 +37,11 @@ internal class JAAKFaceDetectionEngine: NSObject {
     ///   - sampleBuffer: video frame to process
     ///   - timestamp: timestamp in milliseconds (optional, will calculate if not provided)
     func processVideoFrame(_ sampleBuffer: CMSampleBuffer, timestamp: Int? = nil) {
-        print("🎬 [FaceDetectionEngine] processVideoFrame called - disableFaceDetection: \(configuration.disableFaceDetection)")
-        guard !configuration.disableFaceDetection else { 
-            print("⏹️ [FaceDetectionEngine] Face detection disabled in configuration")
-            return 
-        }
-        print("🎬 [FaceDetectionEngine] Face detection enabled, checking faceDetector...")
+        guard !configuration.disableFaceDetection else { return }
         guard let faceDetector = faceDetector else { 
             print("❌ [FaceDetectionEngine] FaceDetector is nil - models not loaded?")
             return 
         }
-        
-        print("🎬 [FaceDetectionEngine] Processing video frame with loaded detector...")
         
         // Store sample buffer for quality analysis
         currentSampleBuffer = sampleBuffer
@@ -78,12 +71,8 @@ internal class JAAKFaceDetectionEngine: NSObject {
                 timestampMs = Int(CMTimeGetSeconds(sampleTimestamp) * 1000)
             }
             
-            print("⏰ [FaceDetectionEngine] Processing frame with timestamp: \(timestampMs)ms")
-            
             // Process with MediaPipe BlazeFace model in live stream mode (same as webcomponent)
             try faceDetector.detectAsync(image: mpImage, timestampInMilliseconds: timestampMs)
-            
-            print("📤 [FaceDetectionEngine] Frame sent for async processing")
             
         } catch {
             let detectorError = JAAKFaceDetectorError(
@@ -132,8 +121,6 @@ internal class JAAKFaceDetectionEngine: NSObject {
             )
         }
         
-        print("✅ [FaceDetectionEngine] Model found at: \(finalPath)")
-        
         do {
             // Create MediaPipe FaceDetector options
             let options = FaceDetectorOptions()
@@ -148,10 +135,6 @@ internal class JAAKFaceDetectionEngine: NSObject {
             // Initialize MediaPipe FaceDetector
             faceDetector = try FaceDetector(options: options)
             
-            print("✅ [FaceDetectionEngine] MediaPipe BlazeFace model loaded from: \(finalPath)")
-            print("✅ [FaceDetectionEngine] FaceDetector successfully initialized")
-            print("🎯 [FaceDetectionEngine] Using same model as webcomponent")
-            
         } catch {
             throw JAAKFaceDetectorError(
                 label: "Failed to initialize MediaPipe FaceDetector",
@@ -165,7 +148,6 @@ internal class JAAKFaceDetectionEngine: NSObject {
         // Convert MediaPipe results to our format (same as webcomponent)
         // Safely access detections array
         let detections = result.detections
-        print("🔍 [FaceDetectionEngine] Processing \(detections.count) detections")
         
         if detections.isEmpty {
             handleNoFaceDetected()
@@ -186,45 +168,29 @@ internal class JAAKFaceDetectionEngine: NSObject {
     private func handleFaceDetected(_ detections: [Detection]) {
         consecutiveNoFaceFrames = 0
         
-        print("🔍 [FaceDetectionEngine] Processing \(detections.count) face detections safely...")
-        
         // Safely access first detection with additional checks
         guard detections.count > 0 else {
-            print("⚠️ [FaceDetectionEngine] Detection array is empty")
             return
         }
         
-        let primaryFace = detections[0] // Use array subscript instead of .first
-        print("🔍 [FaceDetectionEngine] Got primary face detection object")
+        let primaryFace = detections[0]
         
         // Safely access Detection properties with defensive checks
         var confidence: Float = 0.0
         var isValidPosition = false
         
-        print("🔍 [FaceDetectionEngine] Accessing categories array...")
-        
         // Safely access categories to get confidence
-        // Following MediaPipe's official pattern of checking if detections exist first
         let categories = primaryFace.categories
-        print("🔍 [FaceDetectionEngine] Categories count: \(categories.count)")
         
         if categories.count > 0 {
-            print("🔍 [FaceDetectionEngine] Accessing first category...")
-            let firstCategory = categories[0] // Use array subscript instead of .first
+            let firstCategory = categories[0]
             confidence = firstCategory.score
-            print("🔍 [FaceDetectionEngine] Face confidence: \(confidence)")
         } else {
-            print("⚠️ [FaceDetectionEngine] No categories found in detection - using default confidence")
             confidence = 0.9 // Default confidence for detected faces without categories
         }
         
-        print("🔍 [FaceDetectionEngine] About to validate face position...")
-        
         // Validate face position and size with defensive checks
         isValidPosition = validateFacePosition(primaryFace)
-        
-        print("🔍 [FaceDetectionEngine] Face position validation completed: \(isValidPosition)")
-        print("🔍 [FaceDetectionEngine] Creating face detection message...")
         
         let message = JAAKFaceDetectionMessage(
             label: isValidPosition ? "Face detected in correct position" : "Face detected but repositioning needed",
@@ -233,20 +199,13 @@ internal class JAAKFaceDetectionEngine: NSObject {
             correctPosition: isValidPosition
         )
         
-        print("✅ [FaceDetectionEngine] Message created successfully")
-        
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            print("🔄 [FaceDetectionEngine] About to call delegate...")
             
             // Normalize bounding box coordinates to 0-1 range
             let normalizedBoundingBox = self.normalizeBoundingBox(primaryFace.boundingBox)
-            print("🔄 [FaceDetectionEngine] Normalized bounding box: \(normalizedBoundingBox)")
-            print("🔄 [FaceDetectionEngine] Calling delegate with message: \(message.label)")
             let orientationAdjustedSize = self.getOrientationAdjustedVideoSize()
-            print("📐 [FaceDetectionEngine] Video size for overlay: \(orientationAdjustedSize)")
             self.delegate?.faceDetectionEngine(self, didDetectFace: message, boundingBox: normalizedBoundingBox, videoNativeSize: orientationAdjustedSize)
-            print("✅ [FaceDetectionEngine] Delegate call completed")
         }
     }
     
@@ -278,8 +237,6 @@ internal class JAAKFaceDetectionEngine: NSObject {
         // Validate face size following MediaPipe's official pattern
         let boundingBox = detection.boundingBox
         
-        print("🔍 [FaceDetectionEngine] Bounding box received: \(boundingBox)")
-        
         // MediaPipe documentation says coordinates should be normalized [0.0, 1.0]
         // But we're seeing pixel coordinates - this might be the source of the Range crash
         
@@ -287,15 +244,12 @@ internal class JAAKFaceDetectionEngine: NSObject {
         let isNormalized = boundingBox.width <= 1.0 && boundingBox.height <= 1.0 &&
                           boundingBox.origin.x <= 1.0 && boundingBox.origin.y <= 1.0
         
-        print("🔍 [FaceDetectionEngine] Coordinates appear to be: \(isNormalized ? "normalized" : "pixel-based")")
-        
         if isNormalized {
             // Handle normalized coordinates (0.0 to 1.0)
             guard boundingBox.width > 0 && boundingBox.height > 0 &&
                   boundingBox.origin.x >= 0 && boundingBox.origin.y >= 0 &&
                   boundingBox.width <= 1.0 && boundingBox.height <= 1.0 &&
                   boundingBox.origin.x <= 1.0 && boundingBox.origin.y <= 1.0 else {
-                print("⚠️ [FaceDetectionEngine] Invalid normalized bounding box values: \(boundingBox)")
                 return false
             }
             
@@ -304,7 +258,6 @@ internal class JAAKFaceDetectionEngine: NSObject {
             let minimumFaceArea: CGFloat = 0.15 // 15% of frame area
             
             let isValidSize = faceArea >= minimumFaceArea
-            print("🔍 [FaceDetectionEngine] Normalized face area: \(faceArea), valid: \(isValidSize)")
             
             return isValidSize
             
@@ -312,14 +265,12 @@ internal class JAAKFaceDetectionEngine: NSObject {
             // Handle pixel coordinates
             guard boundingBox.width > 0 && boundingBox.height > 0 &&
                   boundingBox.origin.x >= 0 && boundingBox.origin.y >= 0 else {
-                print("⚠️ [FaceDetectionEngine] Invalid pixel bounding box values: \(boundingBox)")
                 return false
             }
             
             // Additional safety checks for extreme values
             guard boundingBox.width < 10000 && boundingBox.height < 10000 &&
                   boundingBox.origin.x < 10000 && boundingBox.origin.y < 10000 else {
-                print("⚠️ [FaceDetectionEngine] Bounding box values too large: \(boundingBox)")
                 return false
             }
             
@@ -328,7 +279,6 @@ internal class JAAKFaceDetectionEngine: NSObject {
             let minimumFacePixelArea: CGFloat = 10000 // Minimum 100x100 pixel face
             
             let isValidSize = faceArea >= minimumFacePixelArea
-            print("🔍 [FaceDetectionEngine] Pixel face area: \(faceArea) pixels, valid: \(isValidSize)")
             
             return isValidSize
         }
@@ -357,6 +307,12 @@ internal class JAAKFaceDetectionEngine: NSObject {
         return consecutiveNoFaceFrames < maxConsecutiveNoFaceFrames
     }
     
+    /// Reset video dimensions (call when camera changes)
+    func resetVideoDimensions() {
+        videoNativeWidth = 0
+        videoNativeHeight = 0
+    }
+    
     /// Transform bounding box coordinates from MediaPipe native space to display space
     /// - Parameter boundingBox: MediaPipe bounding box in native coordinates
     /// - Returns: MediaPipe bounding box (will be transformed to display coordinates in the overlay)
@@ -365,20 +321,21 @@ internal class JAAKFaceDetectionEngine: NSObject {
         // Instead, we pass the MediaPipe coordinates directly to the overlay
         // The overlay will handle the coordinate transformation to display space
         
-        // Get video native dimensions from the current sample buffer
+        // Always refresh video native dimensions from the current sample buffer
         if let sampleBuffer = currentSampleBuffer,
            let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
             let nativeWidth = CVPixelBufferGetWidth(pixelBuffer)
             let nativeHeight = CVPixelBufferGetHeight(pixelBuffer)
             
-            // Store these dimensions for delegate callback
-            videoNativeWidth = CGFloat(nativeWidth)
-            videoNativeHeight = CGFloat(nativeHeight)
+            // Update dimensions if they changed (camera switch or orientation)
+            let newWidth = CGFloat(nativeWidth)
+            let newHeight = CGFloat(nativeHeight)
             
-            print("📐 [FaceDetectionEngine] Video native dimensions: \(nativeWidth)x\(nativeHeight)")
+            if videoNativeWidth != newWidth || videoNativeHeight != newHeight {
+                videoNativeWidth = newWidth
+                videoNativeHeight = newHeight
+            }
         }
-        
-        print("📐 [FaceDetectionEngine] MediaPipe box: \(boundingBox)")
         
         // Return the MediaPipe coordinates as-is
         return boundingBox
@@ -392,15 +349,32 @@ internal class JAAKFaceDetectionEngine: NSObject {
     private func getOrientationAdjustedVideoSize() -> CGSize {
         let minDimension = min(videoNativeWidth, videoNativeHeight)
         let maxDimension = max(videoNativeWidth, videoNativeHeight)
+        let currentOrientation = UIDevice.current.orientation
         
-        switch UIDevice.current.orientation {
+        print("📐 [FaceDetectionEngine] getOrientationAdjustedVideoSize:")
+        print("📐 [FaceDetectionEngine] Native: \(videoNativeWidth)x\(videoNativeHeight)")
+        print("📐 [FaceDetectionEngine] Min/Max: \(minDimension)/\(maxDimension)")
+        print("📐 [FaceDetectionEngine] Current orientation: \(currentOrientation.rawValue)")
+        
+        let adjustedSize: CGSize
+        switch currentOrientation {
         case .portrait, .portraitUpsideDown:
-            return CGSize(width: minDimension, height: maxDimension)
+            adjustedSize = CGSize(width: minDimension, height: maxDimension)
         case .landscapeLeft, .landscapeRight:
-            return CGSize(width: maxDimension, height: minDimension)
+            adjustedSize = CGSize(width: maxDimension, height: minDimension)
         default:
-            return CGSize(width: minDimension, height: maxDimension)
+            adjustedSize = CGSize(width: minDimension, height: maxDimension)
         }
+        
+        print("📐 [FaceDetectionEngine] Adjusted size: \(adjustedSize)")
+        return adjustedSize
+    }
+    
+    /// Update configuration
+    /// - Parameter newConfiguration: new face detector configuration
+    func updateConfiguration(_ newConfiguration: JAAKFaceDetectorConfiguration) {
+        self.configuration = newConfiguration
+        print("✅ [FaceDetectionEngine] Configuration updated")
     }
 }
 

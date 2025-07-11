@@ -47,9 +47,16 @@ internal class JAAKFaceTrackingOverlay: UIView {
     ///   - width: Image width
     ///   - height: Image height
     func setImageDimensions(width: CGFloat, height: CGFloat) {
+        let changed = imageWidth != width || imageHeight != height
         imageWidth = width
         imageHeight = height
-        print("📐 [FaceTrackingOverlay] Image dimensions set: \(width) x \(height)")
+        print("📐 [FaceTrackingOverlay] Image dimensions \(changed ? "CHANGED" : "set"): \(width) x \(height)")
+        
+        // If dimensions changed, redraw any existing detections
+        if changed && !currentDetections.isEmpty {
+            print("📐 [FaceTrackingOverlay] Redrawing due to dimension change")
+            setNeedsDisplay()
+        }
     }
     
     /// Update face detections (MediaPipe pattern)
@@ -182,11 +189,16 @@ internal class JAAKFaceTrackingOverlay: UIView {
             viewSize: bounds.size
         )
         
-        // Validate that the transformed frame is reasonable
-        guard transformedRect.width > 0 && transformedRect.height > 0 &&
-              transformedRect.minX >= 0 && transformedRect.minY >= 0 &&
-              transformedRect.maxX <= bounds.width && transformedRect.maxY <= bounds.height else {
-            print("⚠️ [FaceTrackingOverlay] Invalid transformed frame: \(transformedRect)")
+        // Validate that the transformed frame has valid dimensions but allow it to extend beyond bounds
+        guard transformedRect.width > 0 && transformedRect.height > 0 else {
+            print("⚠️ [FaceTrackingOverlay] Invalid transformed frame dimensions: \(transformedRect)")
+            return
+        }
+        
+        // Clip the rectangle to view bounds if it extends beyond
+        let clippedRect = transformedRect.intersection(bounds)
+        guard !clippedRect.isEmpty else {
+            print("⚠️ [FaceTrackingOverlay] Transformed frame completely outside bounds: \(transformedRect)")
             return
         }
         
@@ -196,12 +208,12 @@ internal class JAAKFaceTrackingOverlay: UIView {
         context.setStrokeColor(strokeColor.cgColor)
         context.setFillColor(UIColor.clear.cgColor)
         
-        // Draw rounded rectangle
-        let path = UIBezierPath(roundedRect: transformedRect, cornerRadius: cornerRadius)
+        // Draw rounded rectangle using the clipped bounds
+        let path = UIBezierPath(roundedRect: clippedRect, cornerRadius: cornerRadius)
         context.addPath(path.cgPath)
         context.strokePath()
         
-        print("📐 [FaceTrackingOverlay] Drew detection: \(detection.boundingBox) -> \(transformedRect)")
+        print("📐 [FaceTrackingOverlay] Drew detection: \(detection.boundingBox) -> \(transformedRect) clipped to \(clippedRect)")
     }
     
     /// Transform detection coordinates to view coordinates (MediaPipe official pattern)

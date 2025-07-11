@@ -13,7 +13,12 @@ public class JAAKFaceDetectorSDK: NSObject {
     public weak var delegate: JAAKFaceDetectorSDKDelegate?
     
     /// Configuration for the face detector
-    public var configuration: JAAKFaceDetectorConfiguration
+    public var configuration: JAAKFaceDetectorConfiguration {
+        didSet {
+            // When configuration changes, update components if needed
+            updateComponentsWithNewConfiguration()
+        }
+    }
     
     /// Current status of the face detector
     public private(set) var status: JAAKFaceDetectorStatus = .notLoaded
@@ -256,7 +261,8 @@ public class JAAKFaceDetectorSDK: NSObject {
         
         try cameraManager.toggleCamera(to: newPosition, configuration: configuration)
         
-        // Clear overlay detections when camera changes like MediaPipe example
+        // Reset video dimensions and clear overlay detections when camera changes
+        faceDetectionEngine?.resetVideoDimensions()
         DispatchQueue.main.async {
             self.faceTrackingOverlay?.clearDetections()
         }
@@ -486,7 +492,7 @@ public class JAAKFaceDetectorSDK: NSObject {
 
 extension JAAKFaceDetectorSDK: JAAKCameraManagerDelegate {
     func cameraManager(_ manager: JAAKCameraManager, didOutput sampleBuffer: CMSampleBuffer) {
-        // Process frame for face detection using background queue like MediaPipe example
+        // Process frame for face detection using backgro11und queue like MediaPipe example
         print("📹 [FaceDetectorSDK] Received frame from camera, processing on background queue")
         let currentTimeMs = Date().timeIntervalSince1970 * 1000
         
@@ -722,6 +728,152 @@ extension JAAKFaceDetectorSDK: JAAKProgressiveRecorderDelegate {
         } else {
             return .faceNotStill
         }
+    }
+    
+    private func updateComponentsWithNewConfiguration() {
+        print("🔧 [FaceDetectorSDK] Configuration changed, updating components...")
+        
+        // Update UI components with new configuration
+        if let recordingTimer = recordingTimer {
+            recordingTimer.updateConfiguration(configuration.timerStyles)
+        }
+        
+        if let faceTrackingOverlay = faceTrackingOverlay {
+            faceTrackingOverlay.updateConfiguration(configuration.faceTrackerStyles)
+        }
+        
+        // Update other components as needed
+        faceDetectionEngine?.updateConfiguration(configuration)
+        videoRecorder?.updateConfiguration(configuration)
+        progressiveRecorder?.updateConfiguration(configuration)
+        instructionController?.updateConfiguration(configuration)
+        
+        print("✅ [FaceDetectorSDK] Components updated with new configuration")
+    }
+    
+    /// Update configuration without recreating the entire SDK
+    /// - Parameter newConfiguration: The new configuration to apply
+    public func updateConfiguration(_ newConfiguration: JAAKFaceDetectorConfiguration) {
+        let oldConfiguration = self.configuration
+        
+        // Check if changes require restart
+        let requiresRestart = configurationRequiresRestart(from: oldConfiguration, to: newConfiguration)
+        
+        if requiresRestart {
+            print("🔄 [FaceDetectorSDK] Configuration changes require restart")
+            let wasRunning = (status == .running)
+            
+            if wasRunning {
+                stopDetection()
+            }
+            
+            self.configuration = newConfiguration
+            
+            if wasRunning {
+                do {
+                    try startDetection()
+                } catch {
+                    delegate?.faceDetector(self, didEncounterError: error as? JAAKFaceDetectorError ?? JAAKFaceDetectorError(label: "Failed to restart after configuration update", code: "CONFIG_UPDATE_RESTART_FAILED"))
+                }
+            }
+        } else {
+            print("✅ [FaceDetectorSDK] Applying configuration changes dynamically")
+            // Apply dynamic changes without restart
+            self.configuration = newConfiguration
+            applyDynamicConfigurationChanges(from: oldConfiguration, to: newConfiguration)
+        }
+    }
+    
+    /// Check if configuration changes require a full restart
+    private func configurationRequiresRestart(from oldConfig: JAAKFaceDetectorConfiguration, to newConfig: JAAKFaceDetectorConfiguration) -> Bool {
+        // These changes require restart
+        return oldConfig.enableMicrophone != newConfig.enableMicrophone ||
+               oldConfig.cameraPosition != newConfig.cameraPosition ||
+               oldConfig.videoQuality != newConfig.videoQuality ||
+               oldConfig.disableFaceDetection != newConfig.disableFaceDetection ||
+               oldConfig.useOfflineModel != newConfig.useOfflineModel
+    }
+    
+    /// Apply configuration changes that can be done dynamically
+    private func applyDynamicConfigurationChanges(from oldConfig: JAAKFaceDetectorConfiguration, to newConfig: JAAKFaceDetectorConfiguration) {
+        
+        // Update UI components that can change dynamically
+        if oldConfig.hideFaceTracker != newConfig.hideFaceTracker {
+            updateFaceTrackerVisibility(hidden: newConfig.hideFaceTracker)
+        }
+        
+        if oldConfig.hideTimer != newConfig.hideTimer {
+            updateTimerVisibility(hidden: newConfig.hideTimer)
+        }
+        
+        if oldConfig.muteFaceDetectionMessages != newConfig.muteFaceDetectionMessages {
+            // This just affects internal message handling, no UI changes needed
+            print("📢 [FaceDetectorSDK] Face detection messages mute status: \(newConfig.muteFaceDetectionMessages)")
+        }
+        
+        // Update timer styles if they changed
+        if !timerStylesMatch(oldConfig.timerStyles, newConfig.timerStyles) {
+            recordingTimer?.updateConfiguration(newConfig.timerStyles)
+        }
+        
+        // Update face tracker styles if they changed
+        if !faceTrackerStylesMatch(oldConfig.faceTrackerStyles, newConfig.faceTrackerStyles) {
+            faceTrackingOverlay?.updateConfiguration(newConfig.faceTrackerStyles)
+        }
+        
+        // Update recording settings
+        if oldConfig.videoDuration != newConfig.videoDuration ||
+           oldConfig.autoRecorder != newConfig.autoRecorder ||
+           oldConfig.progressiveAutoRecorder != newConfig.progressiveAutoRecorder {
+            videoRecorder?.updateConfiguration(newConfig)
+            progressiveRecorder?.updateConfiguration(newConfig)
+        }
+        
+        // Update instruction settings
+        if oldConfig.enableInstructions != newConfig.enableInstructions ||
+           oldConfig.instructionDelay != newConfig.instructionDelay ||
+           oldConfig.instructionReplayDelay != newConfig.instructionReplayDelay ||
+           oldConfig.instructionsButtonText != newConfig.instructionsButtonText {
+            instructionController?.updateConfiguration(newConfig)
+            updateInstructionsVisibility(enabled: newConfig.enableInstructions)
+        }
+    }
+    
+    private func updateFaceTrackerVisibility(hidden: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            self?.faceTrackingOverlay?.isHidden = hidden
+            print("👤 [FaceDetectorSDK] Face tracker visibility updated: \(hidden ? "hidden" : "visible")")
+        }
+    }
+    
+    private func updateTimerVisibility(hidden: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            self?.recordingTimer?.isHidden = hidden
+            print("⏰ [FaceDetectorSDK] Timer visibility updated: \(hidden ? "hidden" : "visible")")
+        }
+    }
+    
+    private func updateInstructionsVisibility(enabled: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            self?.instructionView?.isHidden = !enabled
+            print("📋 [FaceDetectorSDK] Instructions visibility updated: \(enabled ? "enabled" : "disabled")")
+        }
+    }
+    
+    private func timerStylesMatch(_ style1: JAAKTimerStyles, _ style2: JAAKTimerStyles) -> Bool {
+        return style1.textColor == style2.textColor &&
+               style1.circleColor == style2.circleColor &&
+               style1.circleEmptyColor == style2.circleEmptyColor &&
+               style1.circleSuccessColor == style2.circleSuccessColor &&
+               style1.size == style2.size &&
+               style1.fontSize == style2.fontSize &&
+               style1.position == style2.position &&
+               style1.strokeWidth == style2.strokeWidth
+    }
+    
+    private func faceTrackerStylesMatch(_ style1: JAAKFaceTrackerStyles, _ style2: JAAKFaceTrackerStyles) -> Bool {
+        return style1.validColor == style2.validColor &&
+               style1.invalidColor == style2.invalidColor
     }
 }
 
