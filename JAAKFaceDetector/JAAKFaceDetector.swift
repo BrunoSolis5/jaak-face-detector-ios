@@ -31,7 +31,7 @@ public class JAAKFaceDetectorSDK: NSObject {
     private var progressiveRecorder: JAAKProgressiveRecorder?
     
     // Background processing queue like MediaPipe example
-    private let backgroundQueue = DispatchQueue(label: "com.jaak.facedetector.backgroundQueue", qos: .userInitiated)
+    private let backgroundQueue = DispatchQueue(label: "ai.jaak.facedetector.backgroundQueue", qos: .userInitiated)
     
     // UI Components
     private var previewView: UIView?
@@ -39,6 +39,8 @@ public class JAAKFaceDetectorSDK: NSObject {
     private var recordingTimer: JAAKRecordingTimer?
     private var instructionView: JAAKInstructionView?
     private var instructionController: JAAKInstructionController?
+    private var validationMessageView: JAAKValidationMessageView?
+    private var helpButton: UIButton?
     
     
     // MARK: - Initialization
@@ -199,18 +201,47 @@ public class JAAKFaceDetectorSDK: NSObject {
         
         updateStatus(.snapshotting)
         
-        // TODO: Implement snapshot logic
-        // This is a placeholder - actual implementation will be added in next phases
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            let mockResult = JAAKFileResult(
-                data: Data(),
-                base64: "",
-                mimeType: "image/jpeg",
-                fileName: "snapshot.jpg",
-                fileSize: 0
+        // Get current video frame from camera manager and convert to image
+        guard let cameraManager = cameraManager else {
+            let error = JAAKFaceDetectorError(
+                label: "Camera manager not available",
+                code: "CAMERA_MANAGER_NIL"
             )
-            self.updateStatus(.running)
-            completion(.success(mockResult))
+            updateStatus(.running)
+            completion(.failure(error))
+            return
+        }
+        
+        // Request snapshot from camera manager
+        cameraManager.captureStillImage { [weak self] result in
+            DispatchQueue.main.async {
+                self?.updateStatus(.running)
+                
+                switch result {
+                case .success(let imageData):
+                    // Create timestamp-based filename
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyyMMdd_HHmmss"
+                    let fileName = "snapshot_\(formatter.string(from: Date())).jpg"
+                    
+                    // Create base64 string
+                    let base64String = imageData.base64EncodedString()
+                    
+                    let fileResult = JAAKFileResult(
+                        data: imageData,
+                        base64: base64String,
+                        mimeType: "image/jpeg",
+                        fileName: fileName,
+                        fileSize: imageData.count
+                    )
+                    
+                    print("📸 [FaceDetectorSDK] Snapshot captured: \(fileName), size: \(imageData.count) bytes")
+                    completion(.success(fileResult))
+                    
+                case .failure(let error):
+                    completion(.failure(error))
+                }
+            }
         }
     }
     
@@ -387,7 +418,7 @@ public class JAAKFaceDetectorSDK: NSObject {
             print("⚠️ [JAAKFaceDetector] Recording timer is nil, not adding to view")
         }
         
-        // Add instruction view
+        // Add instruction view (for initial tutorial-style instructions)
         if let instructionView = instructionView {
             instructionView.frame = CGRect(
                 x: 20,
@@ -397,6 +428,35 @@ public class JAAKFaceDetectorSDK: NSObject {
             )
             instructionView.autoresizingMask = [.flexibleWidth, .flexibleTopMargin]
             view.addSubview(instructionView)
+        }
+        
+        // Add validation message view (for positioning guidance)
+        if let validationMessageView = validationMessageView {
+            validationMessageView.frame = CGRect(
+                x: 20,
+                y: 50,
+                width: view.bounds.width - 40,
+                height: 50
+            )
+            validationMessageView.autoresizingMask = [.flexibleWidth, .flexibleBottomMargin]
+            view.addSubview(validationMessageView)
+        }
+        
+        // Add help button
+        if let helpButton = helpButton {
+            helpButton.frame = CGRect(
+                x: view.bounds.width - 60,
+                y: 20,
+                width: 40,
+                height: 40
+            )
+            helpButton.autoresizingMask = [.flexibleLeftMargin, .flexibleBottomMargin]
+            
+            // Ensure the button is on top of other views and has proper touch handling
+            view.addSubview(helpButton)
+            view.bringSubviewToFront(helpButton)
+            
+            print("✅ [FaceDetectorSDK] Help button added at frame: \(helpButton.frame)")
         }
         
         previewView = view
@@ -461,7 +521,7 @@ public class JAAKFaceDetectorSDK: NSObject {
             print("⚠️ [FaceDetectorSDK] Recording timer hidden by configuration")
         }
         
-        // Initialize instruction components
+        // Initialize instruction components (tutorial-style instructions)
         if configuration.enableInstructions {
             print("📋 [FaceDetectorSDK] Creating instruction view (enableInstructions = true)")
             instructionView = JAAKInstructionView(configuration: configuration)
@@ -470,6 +530,22 @@ public class JAAKFaceDetectorSDK: NSObject {
         } else {
             print("📋 [FaceDetectorSDK] Skipping instruction view (enableInstructions = false)")
         }
+        
+        // Always create validation message view (for positioning guidance)
+        validationMessageView = JAAKValidationMessageView()
+        print("✅ [FaceDetectorSDK] Validation message view created")
+        
+        // Create help button to reactivate instructions
+        helpButton = HelpButton()
+        helpButton?.setTitle("?", for: .normal)
+        helpButton?.titleLabel?.font = UIFont.systemFont(ofSize: 20, weight: .bold)
+        helpButton?.setTitleColor(.white, for: .normal)
+        helpButton?.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        helpButton?.layer.cornerRadius = 20
+        helpButton?.clipsToBounds = true
+        helpButton?.isUserInteractionEnabled = true
+        helpButton?.addTarget(self, action: #selector(helpButtonTapped), for: .touchUpInside)
+        print("✅ [FaceDetectorSDK] Help button created")
     }
     
     private func checkPermissions() throws {
@@ -507,13 +583,12 @@ public class JAAKFaceDetectorSDK: NSObject {
 
 extension JAAKFaceDetectorSDK: JAAKCameraManagerDelegate {
     func cameraManager(_ manager: JAAKCameraManager, didOutput sampleBuffer: CMSampleBuffer) {
-        // Process frame for face detection using backgro11und queue like MediaPipe example
-        print("📹 [FaceDetectorSDK] Received frame from camera, processing on background queue")
+        // Process frame for face detection directly (MediaPipe handles its own threading)
+        print("📹 [FaceDetectorSDK] Received frame from camera, processing for face detection")
         let currentTimeMs = Date().timeIntervalSince1970 * 1000
         
-        backgroundQueue.async { [weak self] in
-            self?.faceDetectionEngine?.processVideoFrame(sampleBuffer, timestamp: Int(currentTimeMs))
-        }
+        // Process on main thread to avoid Sendable issues with CMSampleBuffer
+        faceDetectionEngine?.processVideoFrame(sampleBuffer, timestamp: Int(currentTimeMs))
     }
     
     func cameraManager(_ manager: JAAKCameraManager, didFinishRecordingTo outputURL: URL) {
@@ -586,8 +661,10 @@ extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
             }
         }
         
-        // Update instruction controller with face detection message
-        instructionController?.showCustomInstruction(message)
+        // Show validation message (always shown for positioning guidance)
+        DispatchQueue.main.async { [weak self] in
+            self?.validationMessageView?.showMessage(message.label)
+        }
         
         // Forward to delegate
         delegate?.faceDetector(self, didDetectFace: message)
@@ -892,8 +969,16 @@ extension JAAKFaceDetectorSDK: JAAKProgressiveRecorderDelegate {
     private func updateInstructionsVisibility(enabled: Bool) {
         DispatchQueue.main.async { [weak self] in
             self?.instructionView?.isHidden = !enabled
+            self?.helpButton?.isHidden = !enabled
             print("📋 [FaceDetectorSDK] Instructions visibility updated: \(enabled ? "enabled" : "disabled")")
         }
+    }
+    
+    @objc private func helpButtonTapped() {
+        print("❓ [FaceDetectorSDK] Help button tapped - showing instructions")
+        print("❓ [Debug] Button frame: \(helpButton?.frame ?? .zero)")
+        print("❓ [Debug] Button superview: \(String(describing: type(of: helpButton?.superview)))")
+        instructionController?.startInstructions()
     }
     
     private func timerStylesMatch(_ style1: JAAKTimerStyles, _ style2: JAAKTimerStyles) -> Bool {
@@ -972,6 +1057,149 @@ internal class CameraPreviewView: UIView {
             connection.videoOrientation = videoOrientation
             print("🔄 [CameraPreviewView] Preview orientation updated to: \(videoOrientation.rawValue)")
         }
+    }
+}
+
+// MARK: - JAAKValidationMessageView
+
+/// Simple view for displaying face position validation messages
+internal class JAAKValidationMessageView: UIView {
+    
+    // MARK: - Properties
+    
+    private let messageLabel = UILabel()
+    private let backgroundView = UIView()
+    private var currentMessage: String = ""
+    
+    // MARK: - Initialization
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupUI()
+    }
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupUI()
+    }
+    
+    // MARK: - Public Methods
+    
+    /// Show validation message
+    /// - Parameter message: message text to display
+    func showMessage(_ message: String) {
+        guard message != currentMessage else { return }
+        
+        currentMessage = message
+        messageLabel.text = message
+        
+        // Show with animation if hidden
+        if isHidden || alpha == 0.0 {
+            show()
+        }
+    }
+    
+    /// Hide the message
+    func hideMessage() {
+        currentMessage = ""
+        hide()
+    }
+    
+    // MARK: - Private Methods
+    
+    private func setupUI() {
+        backgroundColor = .clear
+        
+        // Background view with better visibility
+        backgroundView.backgroundColor = UIColor.black.withAlphaComponent(0.8)
+        backgroundView.layer.cornerRadius = 12
+        backgroundView.layer.borderWidth = 2
+        backgroundView.layer.borderColor = UIColor.orange.cgColor
+        addSubview(backgroundView)
+        
+        // Message label with improved styling
+        messageLabel.font = UIFont.systemFont(ofSize: 18, weight: .semibold)
+        messageLabel.textColor = .white
+        messageLabel.textAlignment = .center
+        messageLabel.numberOfLines = 2
+        messageLabel.text = ""
+        messageLabel.shadowColor = UIColor.black
+        messageLabel.shadowOffset = CGSize(width: 1, height: 1)
+        addSubview(messageLabel)
+        
+        // Layout
+        setupLayout()
+        
+        // Initial state
+        isHidden = true
+        alpha = 0.0
+    }
+    
+    private func setupLayout() {
+        backgroundView.translatesAutoresizingMaskIntoConstraints = false
+        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            // Background fills the view
+            backgroundView.topAnchor.constraint(equalTo: topAnchor),
+            backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            
+            // Message label with padding
+            messageLabel.topAnchor.constraint(equalTo: topAnchor, constant: 8),
+            messageLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            messageLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            messageLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8)
+        ])
+    }
+    
+    private func show() {
+        isHidden = false
+        alpha = 0.0
+        transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        
+        UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: [], animations: {
+            self.alpha = 1.0
+            self.transform = .identity
+        })
+    }
+    
+    private func hide() {
+        UIView.animate(withDuration: 0.2) {
+            self.alpha = 0.0
+            self.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        } completion: { _ in
+            self.isHidden = true
+        }
+    }
+    
+    override var intrinsicContentSize: CGSize {
+        return CGSize(width: UIView.noIntrinsicMetric, height: 50)
+    }
+}
+
+// MARK: - HelpButton
+
+/// Custom button class to ensure proper touch handling
+internal class HelpButton: UIButton {
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        // Only respond to touches within the exact button bounds
+        let result = super.point(inside: point, with: event)
+        if result {
+            print("🎯 [HelpButton] Touch detected at point: \(point) within bounds: \(bounds)")
+        }
+        return result
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        // Ensure the button only captures touches within its bounds
+        let hitView = super.hitTest(point, with: event)
+        if hitView == self {
+            print("🎯 [HelpButton] Hit test successful for point: \(point)")
+        }
+        return hitView
     }
 }
 

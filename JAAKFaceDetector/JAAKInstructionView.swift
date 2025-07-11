@@ -122,6 +122,37 @@ internal class JAAKInstructionView: UIView {
         progressView.setProgress(progress, animated: true)
     }
     
+    /// Show a direct instruction message immediately
+    /// - Parameters:
+    ///   - text: instruction text to display
+    ///   - animation: optional animation name
+    func showDirectInstruction(text: String, animation: String? = nil) {
+        guard configuration.enableInstructions else { return }
+        
+        // Update the label directly
+        instructionLabel.text = text
+        
+        // Show animation if provided
+        if let animationName = animation {
+            showAnimation(animationName)
+        }
+        
+        // Show the instruction view if hidden
+        if isHidden || alpha == 0.0 {
+            currentState = .showing
+            isHidden = false
+            
+            // Animate in
+            alpha = 0.0
+            transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+            
+            UIView.animate(withDuration: 0.4, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: [], animations: {
+                self.alpha = 1.0
+                self.transform = .identity
+            })
+        }
+    }
+    
     // MARK: - Private Methods
     
     private func setupUI() {

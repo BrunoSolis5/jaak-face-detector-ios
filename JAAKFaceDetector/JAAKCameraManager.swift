@@ -325,6 +325,89 @@ extension JAAKCameraManager: AVCaptureFileOutputRecordingDelegate {
             delegate?.cameraManager(self, didFinishRecordingTo: outputFileURL)
         }
     }
+    
+    /// Capture still image from current video frame
+    /// - Parameter completion: completion handler with image data or error
+    func captureStillImage(completion: @escaping (Result<Data, JAAKFaceDetectorError>) -> Void) {
+        print("📸 [CameraManager] Capturing still image...")
+        
+        guard captureSession.isRunning else {
+            let error = JAAKFaceDetectorError(
+                label: "Cannot capture image - camera session not running",
+                code: "SESSION_NOT_RUNNING"
+            )
+            completion(.failure(error))
+            return
+        }
+        
+        // Create photo output if not exists
+        let photoOutput = AVCapturePhotoOutput()
+        
+        guard captureSession.canAddOutput(photoOutput) else {
+            let error = JAAKFaceDetectorError(
+                label: "Cannot add photo output to session",
+                code: "PHOTO_OUTPUT_UNAVAILABLE"
+            )
+            completion(.failure(error))
+            return
+        }
+        
+        // Add photo output temporarily
+        captureSession.beginConfiguration()
+        captureSession.addOutput(photoOutput)
+        captureSession.commitConfiguration()
+        
+        // Configure photo settings
+        let photoSettings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+        
+        // Create photo capture delegate
+        let captureDelegate = PhotoCaptureDelegate { result in
+            // Remove photo output after capture
+            self.captureSession.beginConfiguration()
+            self.captureSession.removeOutput(photoOutput)
+            self.captureSession.commitConfiguration()
+            
+            completion(result)
+        }
+        
+        // Capture photo
+        photoOutput.capturePhoto(with: photoSettings, delegate: captureDelegate)
+    }
+}
+
+// MARK: - PhotoCaptureDelegate
+
+private class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
+    private let completion: (Result<Data, JAAKFaceDetectorError>) -> Void
+    
+    init(completion: @escaping (Result<Data, JAAKFaceDetectorError>) -> Void) {
+        self.completion = completion
+        super.init()
+    }
+    
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        if let error = error {
+            let detectorError = JAAKFaceDetectorError(
+                label: "Photo capture failed",
+                code: "PHOTO_CAPTURE_FAILED",
+                details: error
+            )
+            completion(.failure(detectorError))
+            return
+        }
+        
+        guard let imageData = photo.fileDataRepresentation() else {
+            let error = JAAKFaceDetectorError(
+                label: "Could not get image data from photo",
+                code: "IMAGE_DATA_UNAVAILABLE"
+            )
+            completion(.failure(error))
+            return
+        }
+        
+        print("📸 [PhotoCaptureDelegate] Successfully captured photo: \(imageData.count) bytes")
+        completion(.success(imageData))
+    }
 }
 
 // MARK: - JAAKCameraManagerDelegate

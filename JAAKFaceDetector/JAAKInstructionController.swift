@@ -196,11 +196,8 @@ internal class JAAKInstructionController {
         let instructionText = message.label
         let animationName = getAnimationName(for: trigger)
         
-        // Update instruction view with specific content
+        // Update instruction view with specific content (this now shows the instruction directly)
         updateInstructionView(text: instructionText, animation: animationName)
-        
-        // Show the instruction
-        instructionView.showInstructions()
         
         // Start auto-hide timer
         startInstructionTimer()
@@ -275,16 +272,8 @@ internal class JAAKInstructionController {
     }
     
     private func updateInstructionView(text: String, animation: String?) {
-        // Create a single instruction step
-        _ = JAAKInstructionView.InstructionStep(
-            text: text,
-            animation: animation,
-            duration: configuration.instructionDelay,
-            delay: configuration.instructionReplayDelay
-        )
-        
-        // For now, we'll update the instruction view directly
-        // In a more complex implementation, we'd modify the instruction view to accept dynamic steps
+        // Show the instruction directly on the view
+        instructionView.showDirectInstruction(text: text, animation: animation)
     }
     
     private func startInstructionTimer() {
