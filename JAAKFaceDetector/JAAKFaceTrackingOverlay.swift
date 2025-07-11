@@ -189,8 +189,9 @@ internal class JAAKFaceTrackingOverlay: UIView {
     }
     
     /// Transform detection coordinates to view coordinates (MediaPipe official pattern)
+    /// Following MediaPipe iOS sample exactly - no orientation transforms at overlay level
     /// - Parameters:
-    ///   - originalRect: Original detection rectangle
+    ///   - originalRect: Original detection rectangle from MediaPipe (already oriented)
     ///   - imageSize: Size of the image being processed
     ///   - viewSize: Size of the view
     /// - Returns: Transformed rectangle in view coordinates
@@ -205,103 +206,63 @@ internal class JAAKFaceTrackingOverlay: UIView {
             return originalRect
         }
         
-        // Calculate scale factors
-        let scaleX = viewSize.width / imageSize.width
-        let scaleY = viewSize.height / imageSize.height
-        
-        // Use the same scale for both dimensions to maintain aspect ratio
-        // This matches AVLayerVideoGravityResizeAspect behavior
-        let scale = min(scaleX, scaleY)
-        
-        // Calculate the scaled image size
-        let scaledImageSize = CGSize(
-            width: imageSize.width * scale,
-            height: imageSize.height * scale
+        // MediaPipe pattern: calculate offsets and scale factor
+        let (xOffset, yOffset, scaleFactor) = offsetsAndScaleFactor(
+            forImageOfSize: imageSize,
+            tobeDrawnInViewOfSize: viewSize,
+            withContentMode: .scaleAspectFit
         )
         
-        // Calculate offset to center the scaled image in the view
-        let offsetX = (viewSize.width - scaledImageSize.width) / 2
-        let offsetY = (viewSize.height - scaledImageSize.height) / 2
+        // Apply MediaPipe transformation pattern
+        let transformedRect = originalRect
+            .applying(CGAffineTransform(scaleX: scaleFactor, y: scaleFactor))
+            .applying(CGAffineTransform(translationX: xOffset, y: yOffset))
         
-        // Apply coordinate system transformation based on current device orientation
-        let currentOrientation = UIDevice.current.orientation
-        let (rotatedX, rotatedY, rotatedWidth, rotatedHeight) = transformCoordinatesForOrientation(
-            originalRect: originalRect,
-            imageSize: imageSize,
-            orientation: currentOrientation
-        )
-        
-        // Transform the rotated rectangle
-        let transformedRect = CGRect(
-            x: rotatedX * scale + offsetX,
-            y: rotatedY * scale + offsetY,
-            width: rotatedWidth * scale,
-            height: rotatedHeight * scale
-        )
-        
+        print("📐 [FaceTrackingOverlay] MediaPipe transform:")
         print("📐 [FaceTrackingOverlay] Original: \(originalRect)")
-        print("📐 [FaceTrackingOverlay] Rotated: (\(rotatedX), \(rotatedY), \(rotatedWidth), \(rotatedHeight))")
         print("📐 [FaceTrackingOverlay] Image size: \(imageSize), View size: \(viewSize)")
-        print("📐 [FaceTrackingOverlay] Scale: \(scale), Offset: (\(offsetX), \(offsetY))")
+        print("📐 [FaceTrackingOverlay] Scale: \(scaleFactor), Offset: (\(xOffset), \(yOffset))")
         print("📐 [FaceTrackingOverlay] Transformed: \(transformedRect)")
         
         return transformedRect
     }
     
-    /// Transform coordinates based on device orientation (like native camera app)
-    private func transformCoordinatesForOrientation(
-        originalRect: CGRect,
-        imageSize: CGSize,
-        orientation: UIDeviceOrientation
-    ) -> (x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat) {
+    /// MediaPipe pattern for calculating offsets and scale factor
+    /// Exactly as implemented in MediaPipe iOS sample
+    private func offsetsAndScaleFactor(
+        forImageOfSize imageSize: CGSize,
+        tobeDrawnInViewOfSize viewSize: CGSize,
+        withContentMode contentMode: UIView.ContentMode
+    ) -> (xOffset: CGFloat, yOffset: CGFloat, scaleFactor: CGFloat) {
         
-        switch orientation {
-        case .portrait:
-            // Corrected transform for portrait (fix down-left offset)
-            return (
-                x: originalRect.origin.y,
-                y: imageSize.width - originalRect.origin.x - originalRect.width,
-                width: originalRect.height,
-                height: originalRect.width
-            )
-            
-        case .portraitUpsideDown:
-            // 180-degree rotation
-            return (
-                x: originalRect.origin.y,
-                y: imageSize.width - originalRect.origin.x - originalRect.width,
-                width: originalRect.height,
-                height: originalRect.width
-            )
-            
-        case .landscapeLeft:
-            // 90-degree clockwise
-            return (
-                x: originalRect.origin.x,
-                y: originalRect.origin.y,
-                width: originalRect.width,
-                height: originalRect.height
-            )
-            
-        case .landscapeRight:
-            // 90-degree counter-clockwise
-            return (
-                x: imageSize.width - originalRect.origin.x - originalRect.width,
-                y: imageSize.height - originalRect.origin.y - originalRect.height,
-                width: originalRect.width,
-                height: originalRect.height
-            )
-            
+        let widthScale = viewSize.width / imageSize.width
+        let heightScale = viewSize.height / imageSize.height
+        
+        var scaleFactor: CGFloat = 1.0
+        
+        switch contentMode {
+        case .scaleAspectFit:
+            scaleFactor = min(widthScale, heightScale)
+        case .scaleAspectFill:
+            scaleFactor = max(widthScale, heightScale)
+        case .scaleToFill:
+            // For scaleToFill, we would need different handling
+            scaleFactor = 1.0
         default:
-            // Default to portrait
-            return (
-                x: imageSize.height - originalRect.origin.y - originalRect.height,
-                y: originalRect.origin.x,
-                width: originalRect.height,
-                height: originalRect.width
-            )
+            scaleFactor = min(widthScale, heightScale)
         }
+        
+        let scaledSize = CGSize(
+            width: imageSize.width * scaleFactor,
+            height: imageSize.height * scaleFactor
+        )
+        
+        let xOffset = (viewSize.width - scaledSize.width) / 2.0
+        let yOffset = (viewSize.height - scaledSize.height) / 2.0
+        
+        return (xOffset, yOffset, scaleFactor)
     }
+    
     
     override func layoutSubviews() {
         super.layoutSubviews()
