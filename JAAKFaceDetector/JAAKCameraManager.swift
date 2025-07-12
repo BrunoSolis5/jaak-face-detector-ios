@@ -139,6 +139,8 @@ internal class JAAKCameraManager: NSObject {
     /// - Parameter configuration: detector configuration
     /// - Throws: JAAKFaceDetectorError if toggle fails
     func toggleCamera(to position: AVCaptureDevice.Position, configuration: JAAKFaceDetectorConfiguration) throws {
+        print("🔄 [CameraManager] Toggling camera to position: \(position)")
+        
         captureSession.beginConfiguration()
         
         // Remove current video input
@@ -149,7 +151,17 @@ internal class JAAKCameraManager: NSObject {
         // Add new video input with validation
         try setupCameraInput(position: position, configuration: configuration)
         
+        // Update video orientation for the new camera
+        updateVideoOrientation()
+        
+        // Update mirroring for front camera
+        if let videoConnection = videoOutput?.connection(with: .video) {
+            videoConnection.isVideoMirrored = (position == .front)
+        }
+        
         captureSession.commitConfiguration()
+        
+        print("✅ [CameraManager] Camera toggled successfully to position: \(position)")
     }
     
     /// Get capture session for preview layer
@@ -343,6 +355,7 @@ internal class JAAKCameraManager: NSObject {
         
         print("📱 [CameraManager] Updated video orientation to: \(videoOrientation.rawValue)")
     }
+    
 }
 
 // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate

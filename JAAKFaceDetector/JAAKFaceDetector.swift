@@ -307,6 +307,9 @@ public class JAAKFaceDetectorSDK: NSObject {
         
         try cameraManager.toggleCamera(to: newPosition, configuration: configuration)
         
+        // Update video orientation for the new camera
+        cameraManager.updateVideoOrientation()
+        
         // Reset video dimensions and clear overlay detections when camera changes
         faceDetectionEngine?.resetVideoDimensions()
         DispatchQueue.main.async {
