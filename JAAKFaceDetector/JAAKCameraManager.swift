@@ -103,7 +103,7 @@ internal class JAAKCameraManager: NSObject {
                         
                         // Try to force connection activation by setting video orientation
                         if connection.isVideoOrientationSupported {
-                            connection.videoOrientation = .portrait
+                            connection.videoOrientation = getCurrentVideoOrientation()
                             print("🔧 [CameraManager] Set video orientation to force activation")
                         }
                         
@@ -255,9 +255,9 @@ internal class JAAKCameraManager: NSObject {
             videoOutput = output
             print("✅ [CameraManager] Video output added to session successfully")
             
-            // Set video orientation immediately like MediaPipe example
-            output.connection(with: .video)?.videoOrientation = .portrait
-            print("📱 [CameraManager] Set video orientation to portrait")
+            // Set video orientation based on current device orientation
+            updateVideoOrientation()
+            print("📱 [CameraManager] Set video orientation based on device orientation")
             
             // Handle mirroring for front camera like MediaPipe example
             if output.connection(with: .video)?.isVideoOrientationSupported == true &&
@@ -298,6 +298,50 @@ internal class JAAKCameraManager: NSObject {
             position: position
         )
         return discoverySession.devices.first
+    }
+    
+    // MARK: - Orientation Management
+    
+    /// Get current video orientation based on device orientation
+    private func getCurrentVideoOrientation() -> AVCaptureVideoOrientation {
+        let currentOrientation = UIDevice.current.orientation
+        
+        switch currentOrientation {
+        case .portrait:
+            return .portrait
+        case .portraitUpsideDown:
+            return .portraitUpsideDown
+        case .landscapeLeft:
+            return .landscapeRight  // Camera is rotated 180° relative to device
+        case .landscapeRight:
+            return .landscapeLeft   // Camera is rotated 180° relative to device
+        default:
+            return .portrait
+        }
+    }
+    
+    /// Update video orientation for all connections
+    func updateVideoOrientation() {
+        let videoOrientation = getCurrentVideoOrientation()
+        
+        // Update video output connection
+        if let videoConnection = videoOutput?.connection(with: .video),
+           videoConnection.isVideoOrientationSupported {
+            videoConnection.videoOrientation = videoOrientation
+        }
+        
+        // Update any other video connections
+        for output in captureSession.outputs {
+            if let connections = output.connections as? [AVCaptureConnection] {
+                for connection in connections {
+                    if connection.isVideoOrientationSupported && connection.isActive {
+                        connection.videoOrientation = videoOrientation
+                    }
+                }
+            }
+        }
+        
+        print("📱 [CameraManager] Updated video orientation to: \(videoOrientation.rawValue)")
     }
 }
 

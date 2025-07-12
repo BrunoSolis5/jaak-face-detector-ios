@@ -174,18 +174,47 @@ internal class JAAKFaceTrackingOverlay: UIView {
     }
     
     @objc private func orientationDidChange() {
-        print("📐 [FaceTrackingOverlay] Orientation changed, redrawing overlays")
-        // Clear current detections and redraw
+        print("📐 [FaceTrackingOverlay] Orientation changed, updating coordinate transformation")
+        
+        // Notify via notification that capture orientation should be updated
+        NotificationCenter.default.post(
+            name: NSNotification.Name("JAAKUpdateCaptureOrientation"),
+            object: nil
+        )
+        
+        // Clear current detections and redraw with new orientation
         DispatchQueue.main.async {
+            self.clearDetections()
+            // Force redraw when new detections come in
             self.setNeedsDisplay()
         }
     }
     
+    /// Apply orientation transform to face detection coordinates (like native camera app)
+    private func applyOrientationTransform(to rect: CGRect) -> CGRect {
+        let currentOrientation = UIDevice.current.orientation
+        
+        // Important: Don't transform coordinates here since MediaPipe already provides
+        // coordinates relative to the current video orientation. Just return as-is.
+        // The real issue is ensuring imageWidth/imageHeight are correctly oriented.
+        return rect
+    }
+    
+    /// Get image dimensions (now that camera captures in correct orientation, use dimensions as-is)
+    private func getOrientationAdjustedImageSize() -> CGSize {
+        // Since camera now captures in the correct orientation, 
+        // use the image dimensions directly without transformation
+        return CGSize(width: imageWidth, height: imageHeight)
+    }
+    
     private func drawFaceDetection(_ detection: FaceDetection, in context: CGContext) {
-        // Transform MediaPipe coordinates to view coordinates
+        // Get orientation-adjusted image dimensions for proper coordinate mapping
+        let adjustedImageSize = getOrientationAdjustedImageSize()
+        
+        // Transform MediaPipe coordinates to view coordinates using adjusted dimensions
         let transformedRect = rectAfterApplyingBoundsAdjustment(
             originalRect: detection.boundingBox,
-            imageSize: CGSize(width: imageWidth, height: imageHeight),
+            imageSize: adjustedImageSize,
             viewSize: bounds.size
         )
         

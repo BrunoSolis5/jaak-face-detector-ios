@@ -256,7 +256,7 @@ public class JAAKFaceDetectorSDK: NSObject {
         // Configure preview layer to auto-adjust to device orientation
         previewLayer.videoGravity = .resizeAspectFill
         
-        // Set initial orientation based on current device orientation
+        // Set initial orientation based on current device orientation like native camera app
         updatePreviewLayerOrientation(previewLayer)
         
         return previewLayer
@@ -554,6 +554,14 @@ public class JAAKFaceDetectorSDK: NSObject {
         helpButton?.isUserInteractionEnabled = true
         helpButton?.addTarget(self, action: #selector(helpButtonTapped), for: .touchUpInside)
         print("✅ [FaceDetectorSDK] Help button created")
+        
+        // Listen for orientation change notifications from overlay
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(updateCaptureOrientation),
+            name: NSNotification.Name("JAAKUpdateCaptureOrientation"),
+            object: nil
+        )
     }
     
     private func checkPermissions() throws {
@@ -584,6 +592,15 @@ public class JAAKFaceDetectorSDK: NSObject {
             guard let self = self else { return }
             self.delegate?.faceDetector(self, didUpdateStatus: newStatus)
         }
+    }
+    
+    @objc private func helpButtonTapped() {
+        instructionController?.startInstructions()
+    }
+    
+    @objc private func updateCaptureOrientation() {
+        print("📱 [FaceDetectorSDK] Updating capture orientation due to device rotation")
+        cameraManager?.updateVideoOrientation()
     }
 }
 
@@ -982,13 +999,6 @@ extension JAAKFaceDetectorSDK: JAAKProgressiveRecorderDelegate {
         }
     }
     
-    @objc private func helpButtonTapped() {
-        print("❓ [FaceDetectorSDK] Help button tapped - showing instructions")
-        print("❓ [Debug] Button frame: \(helpButton?.frame ?? .zero)")
-        print("❓ [Debug] Button superview: \(String(describing: type(of: helpButton?.superview)))")
-        instructionController?.startInstructions()
-    }
-    
     private func timerStylesMatch(_ style1: JAAKTimerStyles, _ style2: JAAKTimerStyles) -> Bool {
         return style1.textColor == style2.textColor &&
                style1.circleColor == style2.circleColor &&
@@ -1022,7 +1032,7 @@ internal class CameraPreviewView: UIView {
                 previewLayer.frame = bounds
                 self.previewLayer = previewLayer
                 
-                // Update orientation when layout changes (device rotation)
+                // Update orientation for proper video display like native camera app
                 updatePreviewOrientation()
                 
                 print("📐 [CameraPreviewView] Updated preview layer frame to: \(bounds)")

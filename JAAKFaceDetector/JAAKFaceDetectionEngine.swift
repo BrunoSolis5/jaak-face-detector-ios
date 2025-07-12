@@ -433,16 +433,11 @@ internal class JAAKFaceDetectionEngine: NSObject {
     private var videoNativeWidth: CGFloat = 0
     private var videoNativeHeight: CGFloat = 0
     
-    /// Get video resolution adjusted for current orientation (MediaPipe pattern)
+    /// Get video resolution adjusted for current orientation (like native camera app)
     private func getOrientationAdjustedVideoSize() -> CGSize {
         let minDimension = min(videoNativeWidth, videoNativeHeight)
         let maxDimension = max(videoNativeWidth, videoNativeHeight)
         let currentOrientation = UIDevice.current.orientation
-        
-        print("📐 [FaceDetectionEngine] getOrientationAdjustedVideoSize:")
-        print("📐 [FaceDetectionEngine] Native: \(videoNativeWidth)x\(videoNativeHeight)")
-        print("📐 [FaceDetectionEngine] Min/Max: \(minDimension)/\(maxDimension)")
-        print("📐 [FaceDetectionEngine] Current orientation: \(currentOrientation.rawValue)")
         
         let adjustedSize: CGSize
         switch currentOrientation {
@@ -454,7 +449,6 @@ internal class JAAKFaceDetectionEngine: NSObject {
             adjustedSize = CGSize(width: minDimension, height: maxDimension)
         }
         
-        print("📐 [FaceDetectionEngine] Adjusted size: \(adjustedSize)")
         return adjustedSize
     }
     
