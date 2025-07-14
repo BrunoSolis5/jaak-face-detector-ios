@@ -295,11 +295,11 @@ internal class JAAKInstructionView: UIView {
             helpButton.widthAnchor.constraint(equalToConstant: 32),
             helpButton.heightAnchor.constraint(equalToConstant: 32),
             
-            // Watermark - positioned at bottom-right of the full screen
+            // Watermark - positioned at bottom-right of the full screen with responsive size
             watermarkImageView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -12),
             watermarkImageView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -12),
-            watermarkImageView.widthAnchor.constraint(equalToConstant: 120),
-            watermarkImageView.heightAnchor.constraint(equalToConstant: 30)
+            watermarkImageView.widthAnchor.constraint(equalTo: widthAnchor, multiplier: 0.2),
+            watermarkImageView.heightAnchor.constraint(equalTo: watermarkImageView.widthAnchor, multiplier: 0.25)
         ])
     }
     
