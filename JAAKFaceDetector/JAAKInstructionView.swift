@@ -249,18 +249,19 @@ internal class JAAKInstructionView: UIView {
             backdropView.trailingAnchor.constraint(equalTo: trailingAnchor),
             backdropView.bottomAnchor.constraint(equalTo: bottomAnchor),
             
-            // Background - positioned at bottom of screen
-            backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            backgroundView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -16),
-            backgroundView.heightAnchor.constraint(lessThanOrEqualToConstant: 120),
-            backgroundView.heightAnchor.constraint(greaterThanOrEqualToConstant: 80),
+            // Background - centered both horizontally and vertically, width adjusts to content
+            backgroundView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            backgroundView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            backgroundView.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 32),
+            backgroundView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -32),
+            backgroundView.heightAnchor.constraint(lessThanOrEqualToConstant: 150),
+            backgroundView.heightAnchor.constraint(greaterThanOrEqualToConstant: 120),
             
-            // Content - positioned relative to background
-            contentView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 12),
-            contentView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 12),
-            contentView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -12),
-            contentView.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -12),
+            // Content - positioned relative to background with generous padding
+            contentView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 20),
+            contentView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 24),
+            contentView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -24),
+            contentView.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -20),
             
             // Animation container
             animationContainerView.topAnchor.constraint(equalTo: contentView.topAnchor),
