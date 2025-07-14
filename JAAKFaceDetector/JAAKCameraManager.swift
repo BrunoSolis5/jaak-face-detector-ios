@@ -10,7 +10,16 @@ internal class JAAKCameraManager: NSObject {
     private var videoInput: AVCaptureDeviceInput?
     private var audioInput: AVCaptureDeviceInput?
     private var videoOutput: AVCaptureVideoDataOutput?
-    private var movieFileOutput: AVCaptureMovieFileOutput?
+    
+    // AVAssetWriter for video recording (compatible with face detection)
+    private var assetWriter: AVAssetWriter?
+    private var videoWriterInput: AVAssetWriterInput?
+    private var audioWriterInput: AVAssetWriterInput?
+    private var pixelBufferAdaptor: AVAssetWriterInputPixelBufferAdaptor?
+    private var isCurrentlyRecording = false
+    private var videoDimensions: CGSize?
+    private var recordingStartTime: CMTime?
+    private var recordingOutputURL: URL?
     
     private let videoDataOutputQueue = DispatchQueue(label: "com.jaak.facedetector.videoqueue", qos: .userInitiated)
     
@@ -44,9 +53,7 @@ internal class JAAKCameraManager: NSObject {
         // Setup video output first
         try setupVideoOutput(with: configuration)
         
-        // TODO: Temporarily disable MovieFileOutput to test if it's causing conflicts
-        // try setupMovieFileOutput()
-        // print("✅ [CameraManager] MovieFileOutput setup completed")
+        // Video recording will be handled by AVAssetWriter during frame processing
         
         captureSession.commitConfiguration()
         print("✅ [CameraManager] Capture session configuration completed")
@@ -173,18 +180,29 @@ internal class JAAKCameraManager: NSObject {
     /// Start recording video
     /// - Parameter outputURL: URL where to save the video
     func startRecording(to outputURL: URL) {
-        movieFileOutput?.startRecording(to: outputURL, recordingDelegate: self)
+        guard !isCurrentlyRecording else { return }
+        
+        recordingOutputURL = outputURL
+        isCurrentlyRecording = true
+        recordingStartTime = nil
+        videoDimensions = nil
+        
+        // AssetWriter will be setup when first frame arrives
+        print("🎬 [CameraManager] Recording started, waiting for first frame to setup AVAssetWriter")
     }
     
     /// Stop recording video
     func stopRecording() {
-        movieFileOutput?.stopRecording()
+        guard isCurrentlyRecording else { return }
+        
+        isCurrentlyRecording = false
+        finishRecording()
     }
     
     /// Check if currently recording
     /// - Returns: true if recording is in progress
     func isRecording() -> Bool {
-        return movieFileOutput?.isRecording ?? false
+        return isCurrentlyRecording
     }
     
     // MARK: - Private Methods
@@ -289,19 +307,6 @@ internal class JAAKCameraManager: NSObject {
         }
     }
     
-    private func setupMovieFileOutput() throws {
-        let output = AVCaptureMovieFileOutput()
-        
-        if captureSession.canAddOutput(output) {
-            captureSession.addOutput(output)
-            movieFileOutput = output
-        } else {
-            throw JAAKFaceDetectorError(
-                label: "Cannot add movie file output",
-                code: "MOVIE_OUTPUT_FAILED"
-            )
-        }
-    }
     
     private func getCameraDevice(for position: AVCaptureDevice.Position) -> AVCaptureDevice? {
         let discoverySession = AVCaptureDevice.DiscoverySession(
@@ -362,25 +367,160 @@ internal class JAAKCameraManager: NSObject {
 
 extension JAAKCameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        print("🎬🎬🎬 [CameraManager] *** FRAME RECEIVED *** Sample buffer captured, forwarding to delegate")
+        // Always forward to delegate for face detection
         delegate?.cameraManager(self, didOutput: sampleBuffer)
+        
+        // Process frame for recording if active
+        if isCurrentlyRecording {
+            processVideoFrame(sampleBuffer)
+        }
     }
 }
 
-// MARK: - AVCaptureFileOutputRecordingDelegate
+// MARK: - Video Recording Methods
 
-extension JAAKCameraManager: AVCaptureFileOutputRecordingDelegate {
-    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
-        if let error = error {
-            let detectorError = JAAKFaceDetectorError(
-                label: "Video recording failed",
-                code: "VIDEO_RECORDING_FAILED",
-                details: error
-            )
-            delegate?.cameraManager(self, didFailWithError: detectorError)
-        } else {
-            delegate?.cameraManager(self, didFinishRecordingTo: outputFileURL)
+extension JAAKCameraManager {
+    
+    private func processVideoFrame(_ sampleBuffer: CMSampleBuffer) {
+        guard let outputURL = recordingOutputURL else { return }
+        
+        // Setup asset writer on first frame if not done yet
+        if assetWriter == nil {
+            if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+                let width = CVPixelBufferGetWidth(pixelBuffer)
+                let height = CVPixelBufferGetHeight(pixelBuffer)
+                videoDimensions = CGSize(width: width, height: height)
+                
+                do {
+                    try setupAssetWriter(outputURL: outputURL)
+                    print("✅ [CameraManager] AVAssetWriter setup completed")
+                } catch {
+                    print("❌ [CameraManager] Failed to setup AVAssetWriter: \(error)")
+                    let detectorError = JAAKFaceDetectorError(
+                        label: "Failed to setup video recording",
+                        code: "ASSET_WRITER_SETUP_FAILED",
+                        details: error
+                    )
+                    delegate?.cameraManager(self, didFailWithError: detectorError)
+                    return
+                }
+            }
         }
+        
+        // Start recording session on first frame
+        if recordingStartTime == nil {
+            let presentationTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            recordingStartTime = presentationTime
+            assetWriter?.startSession(atSourceTime: presentationTime)
+            print("🎬 [CameraManager] Recording session started")
+        }
+        
+        // Append video frame
+        if let videoWriterInput = videoWriterInput,
+           let pixelBufferAdaptor = pixelBufferAdaptor,
+           let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer),
+           videoWriterInput.isReadyForMoreMediaData {
+            
+            let presentationTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            pixelBufferAdaptor.append(pixelBuffer, withPresentationTime: presentationTime)
+        }
+    }
+    
+    private func setupAssetWriter(outputURL: URL) throws {
+        guard let dimensions = videoDimensions else {
+            throw JAAKFaceDetectorError(
+                label: "Video dimensions not available",
+                code: "VIDEO_DIMENSIONS_UNAVAILABLE"
+            )
+        }
+        
+        // Remove existing file if it exists
+        if FileManager.default.fileExists(atPath: outputURL.path) {
+            try FileManager.default.removeItem(at: outputURL)
+        }
+        
+        // Create asset writer
+        assetWriter = try AVAssetWriter(outputURL: outputURL, fileType: .mov)
+        
+        // Video input settings
+        let videoSettings: [String: Any] = [
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: Int(dimensions.width),
+            AVVideoHeightKey: Int(dimensions.height),
+            AVVideoCompressionPropertiesKey: [
+                AVVideoAverageBitRateKey: 2000000
+            ]
+        ]
+        
+        // Create video writer input
+        videoWriterInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
+        videoWriterInput?.expectsMediaDataInRealTime = true
+        
+        // Create pixel buffer adaptor
+        pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(
+            assetWriterInput: videoWriterInput!,
+            sourcePixelBufferAttributes: [
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+            ]
+        )
+        
+        // Add video input to asset writer
+        if let videoWriterInput = videoWriterInput,
+           assetWriter!.canAdd(videoWriterInput) {
+            assetWriter!.add(videoWriterInput)
+        } else {
+            throw JAAKFaceDetectorError(
+                label: "Cannot add video input to asset writer",
+                code: "VIDEO_INPUT_ADD_FAILED"
+            )
+        }
+        
+        // Start writing
+        if !assetWriter!.startWriting() {
+            throw JAAKFaceDetectorError(
+                label: "Failed to start asset writer",
+                code: "ASSET_WRITER_START_FAILED"
+            )
+        }
+    }
+    
+    private func finishRecording() {
+        guard let assetWriter = assetWriter,
+              let outputURL = recordingOutputURL else { return }
+        
+        // Mark inputs as finished
+        videoWriterInput?.markAsFinished()
+        
+        // Finish writing
+        assetWriter.finishWriting { [weak self] in
+            DispatchQueue.main.async {
+                if assetWriter.status == .completed {
+                    print("✅ [CameraManager] Video recording completed successfully")
+                    self?.delegate?.cameraManager(self!, didFinishRecordingTo: outputURL)
+                } else {
+                    print("❌ [CameraManager] Video recording failed: \(assetWriter.error?.localizedDescription ?? "Unknown error")")
+                    let error = JAAKFaceDetectorError(
+                        label: "Video recording failed",
+                        code: "VIDEO_RECORDING_FAILED",
+                        details: assetWriter.error
+                    )
+                    self?.delegate?.cameraManager(self!, didFailWithError: error)
+                }
+                
+                // Clean up
+                self?.cleanupRecording()
+            }
+        }
+    }
+    
+    private func cleanupRecording() {
+        assetWriter = nil
+        videoWriterInput = nil
+        audioWriterInput = nil
+        pixelBufferAdaptor = nil
+        videoDimensions = nil
+        recordingStartTime = nil
+        recordingOutputURL = nil
     }
     
     /// Capture still image from current video frame
@@ -403,32 +543,28 @@ extension JAAKCameraManager: AVCaptureFileOutputRecordingDelegate {
         guard captureSession.canAddOutput(photoOutput) else {
             let error = JAAKFaceDetectorError(
                 label: "Cannot add photo output to session",
-                code: "PHOTO_OUTPUT_UNAVAILABLE"
+                code: "PHOTO_OUTPUT_FAILED"
             )
             completion(.failure(error))
             return
         }
         
         // Add photo output temporarily
-        captureSession.beginConfiguration()
         captureSession.addOutput(photoOutput)
-        captureSession.commitConfiguration()
         
         // Configure photo settings
-        let photoSettings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+        let photoSettings = AVCapturePhotoSettings()
+        photoSettings.isHighResolutionPhotoEnabled = true
         
-        // Create photo capture delegate
-        let captureDelegate = PhotoCaptureDelegate { result in
+        // Create delegate for photo capture
+        let photoDelegate = PhotoCaptureDelegate { result in
             // Remove photo output after capture
-            self.captureSession.beginConfiguration()
             self.captureSession.removeOutput(photoOutput)
-            self.captureSession.commitConfiguration()
-            
             completion(result)
         }
         
         // Capture photo
-        photoOutput.capturePhoto(with: photoSettings, delegate: captureDelegate)
+        photoOutput.capturePhoto(with: photoSettings, delegate: photoDelegate)
     }
 }
 
