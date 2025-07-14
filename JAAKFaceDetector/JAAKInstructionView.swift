@@ -377,43 +377,124 @@ internal class JAAKInstructionView: UIView {
         view.backgroundColor = UIColor.white.withAlphaComponent(0.2)
         view.layer.cornerRadius = 40
         
-        switch animationName {
-        case "center_face":
-            view.layer.borderWidth = 2
-            view.layer.borderColor = UIColor.white.cgColor
-            
-        case "move_closer":
-            view.backgroundColor = UIColor.green.withAlphaComponent(0.3)
-            
-        case "move_away":
-            view.backgroundColor = UIColor.orange.withAlphaComponent(0.3)
-            
-        case "hold_still":
+        // Create appropriate placeholder based on animation name or URL
+        if animationName.contains("glasses") {
             view.backgroundColor = UIColor.blue.withAlphaComponent(0.3)
-            
-        default:
-            break
+            addGlassesPlaceholder(to: view)
+        } else if animationName.contains("hat") {
+            view.backgroundColor = UIColor.green.withAlphaComponent(0.3)
+            addHatPlaceholder(to: view)
+        } else if animationName.contains("headphones") {
+            view.backgroundColor = UIColor.purple.withAlphaComponent(0.3)
+            addHeadphonesPlaceholder(to: view)
+        } else if animationName.contains("light") {
+            view.backgroundColor = UIColor.yellow.withAlphaComponent(0.3)
+            addLightPlaceholder(to: view)
+        } else {
+            // Handle old animation names
+            switch animationName {
+            case "center_face":
+                view.layer.borderWidth = 2
+                view.layer.borderColor = UIColor.white.cgColor
+                
+            case "move_closer":
+                view.backgroundColor = UIColor.green.withAlphaComponent(0.3)
+                
+            case "move_away":
+                view.backgroundColor = UIColor.orange.withAlphaComponent(0.3)
+                
+            case "hold_still":
+                view.backgroundColor = UIColor.blue.withAlphaComponent(0.3)
+                
+            default:
+                view.layer.borderWidth = 2
+                view.layer.borderColor = UIColor.white.cgColor
+            }
         }
         
         return view
     }
     
+    
+    private func addGlassesPlaceholder(to view: UIView) {
+        let leftLens = UIView()
+        leftLens.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        leftLens.layer.cornerRadius = 8
+        leftLens.frame = CGRect(x: 15, y: 30, width: 16, height: 16)
+        view.addSubview(leftLens)
+        
+        let rightLens = UIView()
+        rightLens.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        rightLens.layer.cornerRadius = 8
+        rightLens.frame = CGRect(x: 49, y: 30, width: 16, height: 16)
+        view.addSubview(rightLens)
+    }
+    
+    private func addHatPlaceholder(to view: UIView) {
+        let hatTop = UIView()
+        hatTop.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        hatTop.layer.cornerRadius = 6
+        hatTop.frame = CGRect(x: 30, y: 20, width: 20, height: 20)
+        view.addSubview(hatTop)
+        
+        let hatBrim = UIView()
+        hatBrim.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        hatBrim.layer.cornerRadius = 4
+        hatBrim.frame = CGRect(x: 20, y: 35, width: 40, height: 8)
+        view.addSubview(hatBrim)
+    }
+    
+    private func addHeadphonesPlaceholder(to view: UIView) {
+        let leftEar = UIView()
+        leftEar.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        leftEar.layer.cornerRadius = 8
+        leftEar.frame = CGRect(x: 10, y: 25, width: 16, height: 20)
+        view.addSubview(leftEar)
+        
+        let rightEar = UIView()
+        rightEar.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        rightEar.layer.cornerRadius = 8
+        rightEar.frame = CGRect(x: 54, y: 25, width: 16, height: 20)
+        view.addSubview(rightEar)
+    }
+    
+    private func addLightPlaceholder(to view: UIView) {
+        let lightBulb = UIView()
+        lightBulb.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        lightBulb.layer.cornerRadius = 12
+        lightBulb.frame = CGRect(x: 28, y: 28, width: 24, height: 24)
+        view.addSubview(lightBulb)
+    }
+    
+    
     private func startAnimation(_ view: UIView, for animationName: String) {
-        switch animationName {
-        case "center_face":
-            animateCenterFace(view)
-            
-        case "move_closer":
-            animateMoveCloser(view)
-            
-        case "move_away":
-            animateMoveAway(view)
-            
-        case "hold_still":
-            animateHoldStill(view)
-            
-        default:
-            animateDefault(view)
+        // Animate based on animation name or URL content
+        if animationName.contains("glasses") {
+            animateGlasses(view)
+        } else if animationName.contains("hat") {
+            animateHat(view)
+        } else if animationName.contains("headphones") {
+            animateHeadphones(view)
+        } else if animationName.contains("light") {
+            animateLight(view)
+        } else {
+            // Handle old animation names
+            switch animationName {
+            case "center_face":
+                animateCenterFace(view)
+                
+            case "move_closer":
+                animateMoveCloser(view)
+                
+            case "move_away":
+                animateMoveAway(view)
+                
+            case "hold_still":
+                animateHoldStill(view)
+                
+            default:
+                animateDefault(view)
+            }
         }
     }
     
@@ -444,6 +525,30 @@ internal class JAAKInstructionView: UIView {
     private func animateDefault(_ view: UIView) {
         UIView.animate(withDuration: 2.0, delay: 0, options: [.repeat, .autoreverse], animations: {
             view.transform = CGAffineTransform(rotationAngle: .pi)
+        })
+    }
+    
+    private func animateGlasses(_ view: UIView) {
+        UIView.animate(withDuration: 1.0, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
+        })
+    }
+    
+    private func animateHat(_ view: UIView) {
+        UIView.animate(withDuration: 1.2, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.transform = CGAffineTransform(translationX: 0, y: -8)
+        })
+    }
+    
+    private func animateHeadphones(_ view: UIView) {
+        UIView.animate(withDuration: 0.8, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.transform = CGAffineTransform(rotationAngle: .pi / 12)
+        })
+    }
+    
+    private func animateLight(_ view: UIView) {
+        UIView.animate(withDuration: 0.6, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.alpha = 0.4
         })
     }
     

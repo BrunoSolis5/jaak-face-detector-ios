@@ -6,6 +6,7 @@ target 'JAAKFaceDetector' do
   # MediaPipe Tasks Vision for face detection
   pod 'MediaPipeTasksVision'
   
+  
   # Testing target
   target 'JAAKFaceDetectorTests' do
     inherit! :search_paths
