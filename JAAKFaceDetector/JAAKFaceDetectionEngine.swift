@@ -11,6 +11,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
     private var lastFaceDetectionTime: Date = Date()
     private var consecutiveNoFaceFrames: Int = 0
     private let maxConsecutiveNoFaceFrames = 5
+    private var isDetectionPaused: Bool = false
     
     weak var delegate: JAAKFaceDetectionEngineDelegate?
     
@@ -38,6 +39,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
     ///   - timestamp: timestamp in milliseconds (optional, will calculate if not provided)
     func processVideoFrame(_ sampleBuffer: CMSampleBuffer, timestamp: Int? = nil) {
         guard !configuration.disableFaceDetection else { return }
+        guard !isDetectionPaused else { return } // Skip detection if paused for instructions
         guard let faceDetector = faceDetector else { 
             print("❌ [FaceDetectionEngine] FaceDetector is nil - models not loaded?")
             return 
@@ -495,6 +497,20 @@ extension JAAKFaceDetectionEngine: FaceDetectorLiveStreamDelegate {
         
         // Handle MediaPipe results with defensive error handling
         handleMediaPipeResults(result)
+    }
+    
+    // MARK: - Detection Control
+    
+    /// Pause face detection (for instructions)
+    func pauseDetection() {
+        isDetectionPaused = true
+        print("⏸️ [FaceDetectionEngine] Face detection paused")
+    }
+    
+    /// Resume face detection (after instructions)
+    func resumeDetection() {
+        isDetectionPaused = false
+        print("▶️ [FaceDetectionEngine] Face detection resumed")
     }
 }
 

@@ -759,6 +759,17 @@ extension JAAKFaceDetectorSDK: JAAKInstructionControllerDelegate {
             }
         }
     }
+    
+    func instructionController(_ controller: JAAKInstructionController, shouldPauseDetection pause: Bool) {
+        // Pause or resume face detection based on instruction state
+        if pause {
+            print("🎓 [FaceDetectorSDK] Pausing face detection for instructions")
+            faceDetectionEngine?.pauseDetection()
+        } else {
+            print("🎓 [FaceDetectorSDK] Resuming face detection after instructions")
+            faceDetectionEngine?.resumeDetection()
+        }
+    }
 }
 
 

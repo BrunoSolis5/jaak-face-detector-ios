@@ -32,6 +32,7 @@ internal class JAAKInstructionView: UIView {
     private var currentStepIndex: Int = 0
     
     // UI Components
+    private let backdropView = UIView()
     private let backgroundView = UIView()
     private let contentView = UIView()
     private let instructionLabel = UILabel()
@@ -70,7 +71,13 @@ internal class JAAKInstructionView: UIView {
         currentState = .showing
         currentStepIndex = 0
         
-        // Show the instruction content
+        // Notify delegate that instructions are starting (to pause detection)
+        delegate?.instructionView(self, willStartInstructions: true)
+        
+        // Show the backdrop and instruction content
+        backdropView.isHidden = false
+        backdropView.alpha = 0.0
+        
         backgroundView.isHidden = false
         backgroundView.alpha = 0.0
         backgroundView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
@@ -80,6 +87,7 @@ internal class JAAKInstructionView: UIView {
         contentView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
         
         UIView.animate(withDuration: 0.4, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: [], animations: {
+            self.backdropView.alpha = 1.0
             self.backgroundView.alpha = 1.0
             self.backgroundView.transform = .identity
             self.contentView.alpha = 1.0
@@ -95,14 +103,19 @@ internal class JAAKInstructionView: UIView {
         stopCurrentTimer()
         
         UIView.animate(withDuration: 0.3) {
+            self.backdropView.alpha = 0.0
             self.backgroundView.alpha = 0.0
             self.backgroundView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
             self.contentView.alpha = 0.0
             self.contentView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
         } completion: { _ in
+            self.backdropView.isHidden = true
             self.backgroundView.isHidden = true
             self.contentView.isHidden = true
             self.delegate?.instructionView(self, didComplete: false)
+            
+            // Notify delegate that instructions ended (to resume detection)
+            self.delegate?.instructionView(self, willStartInstructions: false)
         }
     }
     
@@ -163,6 +176,10 @@ internal class JAAKInstructionView: UIView {
     // MARK: - Private Methods
     
     private func setupUI() {
+        // Backdrop - full screen dark overlay
+        backdropView.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        addSubview(backdropView)
+        
         // Background
         backgroundView.backgroundColor = UIColor.black.withAlphaComponent(0.8)
         backgroundView.layer.cornerRadius = 16
@@ -207,7 +224,9 @@ internal class JAAKInstructionView: UIView {
         alpha = 1.0
         isUserInteractionEnabled = true
         
-        // Hide the instruction content initially
+        // Hide the instruction content and backdrop initially
+        backdropView.isHidden = true
+        backdropView.alpha = 0.0
         backgroundView.isHidden = true
         backgroundView.alpha = 0.0
         contentView.isHidden = true
@@ -215,6 +234,7 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func setupLayout() {
+        backdropView.translatesAutoresizingMaskIntoConstraints = false
         backgroundView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
         instructionLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -223,6 +243,12 @@ internal class JAAKInstructionView: UIView {
         helpButton.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
+            // Backdrop - full screen overlay
+            backdropView.topAnchor.constraint(equalTo: topAnchor),
+            backdropView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            backdropView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            backdropView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            
             // Background - positioned at bottom of screen
             backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
@@ -588,4 +614,5 @@ internal class JAAKInstructionView: UIView {
 protocol JAAKInstructionViewDelegate: AnyObject {
     func instructionView(_ instructionView: JAAKInstructionView, didComplete completed: Bool)
     func instructionViewHelpButtonTapped(_ instructionView: JAAKInstructionView)
+    func instructionView(_ instructionView: JAAKInstructionView, willStartInstructions isStarting: Bool)
 }

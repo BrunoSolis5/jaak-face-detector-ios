@@ -199,10 +199,16 @@ extension JAAKInstructionController: JAAKInstructionViewDelegate {
         // When help button is tapped, restart the instruction sequence
         startInstructions()
     }
+    
+    func instructionView(_ instructionView: JAAKInstructionView, willStartInstructions isStarting: Bool) {
+        // Notify the main controller to pause/resume face detection
+        delegate?.instructionController(self, shouldPauseDetection: isStarting)
+    }
 }
 
 // MARK: - JAAKInstructionControllerDelegate
 
 protocol JAAKInstructionControllerDelegate: AnyObject {
     func instructionController(_ controller: JAAKInstructionController, didCompleteInstructions completed: Bool)
+    func instructionController(_ controller: JAAKInstructionController, shouldPauseDetection pause: Bool)
 }
