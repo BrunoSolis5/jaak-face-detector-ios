@@ -28,7 +28,6 @@ public class JAAKFaceDetectorSDK: NSObject {
     private var faceDetectionEngine: JAAKFaceDetectionEngine?
     private var videoRecorder: JAAKVideoRecorder?
     private var securityMonitor: JAAKSecurityMonitor?
-    private var progressiveRecorder: JAAKProgressiveRecorder?
     
     // Background processing queue like MediaPipe example
     private let backgroundQueue = DispatchQueue(label: "ai.jaak.facedetector.backgroundQueue", qos: .userInitiated)
@@ -97,10 +96,7 @@ public class JAAKFaceDetectorSDK: NSObject {
             // Show initial instructions
             instructionController?.startInstructions()
             
-            // Start progressive recording if enabled
-            if configuration.progressiveAutoRecorder {
-                progressiveRecorder?.startProgressiveRecording()
-            }
+            // Progressive auto recorder works automatically after recording completion
             
             updateStatus(.running)
         } catch {
@@ -120,7 +116,6 @@ public class JAAKFaceDetectorSDK: NSObject {
         cameraManager?.stopSession()
         securityMonitor?.stopMonitoring()
         instructionController?.hideInstructions()
-        progressiveRecorder?.stopProgressiveRecording()
         updateStatus(.stopped)
     }
     
@@ -507,15 +502,6 @@ public class JAAKFaceDetectorSDK: NSObject {
         securityMonitor = JAAKSecurityMonitor(configuration: configuration)
         securityMonitor?.delegate = self
         
-        // Initialize progressive recorder
-        if let videoRecorder = videoRecorder, let cameraManager = cameraManager {
-            progressiveRecorder = JAAKProgressiveRecorder(
-                configuration: configuration,
-                videoRecorder: videoRecorder,
-                cameraManager: cameraManager
-            )
-            progressiveRecorder?.delegate = self
-        }
         
         // Initialize UI components
         if !configuration.hideFaceTracker {
@@ -699,8 +685,8 @@ extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
     }
     
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didDetectFaces detections: [Detection], sampleBuffer: CMSampleBuffer) {
-        // Process faces for progressive recording
-        progressiveRecorder?.processFaceDetectionResults(detections, sampleBuffer: sampleBuffer)
+        // Face detection results received - progressive recording is handled automatically
+        // through the normal recording flow when faces are detected
     }
     
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didFailWithError error: JAAKFaceDetectorError) {
@@ -725,8 +711,34 @@ extension JAAKFaceDetectorSDK: JAAKVideoRecorderDelegate {
     
     func videoRecorder(_ recorder: JAAKVideoRecorder, didFinishRecording fileResult: JAAKFileResult) {
         updateStatus(.finished)
-        recordingTimer?.stopTimer()
+        
+        // Stop timer with progressive flag if needed
+        let isProgressive = configuration.progressiveAutoRecorder
+        recordingTimer?.stopTimer(isProgressive: isProgressive)
+        
+        // Always notify delegate about the completed recording
         delegate?.faceDetector(self, didCaptureFile: fileResult)
+        
+        // If progressive auto recorder is enabled, prepare for next recording
+        if configuration.progressiveAutoRecorder {
+            resetForNextRecording()
+        }
+    }
+    
+    /// Reset all states to prepare for next recording in progressive mode
+    private func resetForNextRecording() {
+        print("🔄 [FaceDetectorSDK] Progressive auto recorder enabled - preparing for next recording...")
+        print("📊 [FaceDetectorSDK] Current status: \(status), autoRecorder: \(configuration.autoRecorder)")
+        
+        // Clear any previous face detection state that might block new recording
+        faceDetectionEngine?.resetDetectionState()
+        
+        // Ensure status is back to running for auto-recording detection (with delay to allow UI to update)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.updateStatus(.running)
+            print("✅ [FaceDetectorSDK] Status set to .running - ready for next progressive recording")
+            print("🎯 [FaceDetectorSDK] Auto-recording enabled: \(self.configuration.autoRecorder)")
+        }
     }
     
     func videoRecorder(_ recorder: JAAKVideoRecorder, didFailWithError error: JAAKFaceDetectorError) {
@@ -784,93 +796,9 @@ extension JAAKFaceDetectorSDK: JAAKInstructionControllerDelegate {
     }
 }
 
-// MARK: - JAAKProgressiveRecorderDelegate
+// MARK: - Configuration Updates
 
-extension JAAKFaceDetectorSDK: JAAKProgressiveRecorderDelegate {
-    func progressiveRecorder(_ recorder: JAAKProgressiveRecorder, didStartSession session: JAAKProgressiveRecorder.RecordingSession) {
-        // Progressive recording session started
-        instructionController?.forceShowInstruction(.recordingStarted)
-    }
-    
-    func progressiveRecorder(_ recorder: JAAKProgressiveRecorder, didStartAttempt attempt: JAAKProgressiveRecorder.RecordingAttempt) {
-        // New recording attempt started
-        updateStatus(.recording)
-        recordingTimer?.startTimer(duration: configuration.videoDuration)
-        
-        // Show attempt-specific instruction
-        let instruction = getInstructionForAttempt(attempt)
-        instructionController?.forceShowInstruction(instruction)
-    }
-    
-    func progressiveRecorder(_ recorder: JAAKProgressiveRecorder, didCompleteAttempt attempt: JAAKProgressiveRecorder.RecordingAttempt) {
-        // Recording attempt completed
-        updateStatus(.running)
-        recordingTimer?.stopTimer()
-        
-        if attempt.meetsCriteria {
-            // Good quality attempt
-            instructionController?.forceShowInstruction(.recordingCompleted)
-        } else {
-            // Poor quality, will try again
-            let instruction = getImprovementInstructionForAttempt(attempt)
-            instructionController?.forceShowInstruction(instruction)
-        }
-    }
-    
-    func progressiveRecorder(_ recorder: JAAKProgressiveRecorder, didFailAttempt attempt: JAAKProgressiveRecorder.RecordingAttempt, error: JAAKFaceDetectorError) {
-        // Recording attempt failed
-        updateStatus(.error)
-        recordingTimer?.stopTimer()
-        instructionController?.handleError(error)
-        delegate?.faceDetector(self, didEncounterError: error)
-    }
-    
-    func progressiveRecorder(_ recorder: JAAKProgressiveRecorder, willStartNextAttempt attemptNumber: Int) {
-        // Preparing for next attempt
-        let message = "Preparing for attempt \(attemptNumber)..."
-        instructionController?.forceShowInstruction(.error(message))
-    }
-    
-    func progressiveRecorder(_ recorder: JAAKProgressiveRecorder, didCompleteSession session: JAAKProgressiveRecorder.RecordingSession) {
-        // Progressive recording session completed
-        updateStatus(.finished)
-        instructionController?.forceShowInstruction(.recordingCompleted)
-    }
-    
-    func progressiveRecorder(_ recorder: JAAKProgressiveRecorder, didProduceBestResult fileResult: JAAKFileResult, from session: JAAKProgressiveRecorder.RecordingSession) {
-        // Best result from progressive recording session
-        updateStatus(.finished)
-        delegate?.faceDetector(self, didCaptureFile: fileResult)
-    }
-    
-    // MARK: - Helper Methods
-    
-    private func getInstructionForAttempt(_ attempt: JAAKProgressiveRecorder.RecordingAttempt) -> JAAKInstructionController.InstructionTrigger {
-        switch attempt.attemptNumber {
-        case 1:
-            return .recordingStarted
-        case 2:
-            return .faceDetected
-        case 3:
-            return .faceDetected
-        default:
-            return .recordingStarted
-        }
-    }
-    
-    private func getImprovementInstructionForAttempt(_ attempt: JAAKProgressiveRecorder.RecordingAttempt) -> JAAKInstructionController.InstructionTrigger {
-        // Provide specific feedback based on what needs improvement
-        if attempt.faceSize < 0.15 {
-            return .faceTooFar
-        } else if attempt.faceSize > 0.30 {
-            return .faceToClose
-        } else if attempt.faceConfidence < 0.8 {
-            return .faceNotCentered
-        } else {
-            return .faceNotStill
-        }
-    }
-    
+extension JAAKFaceDetectorSDK {
     private func updateComponentsWithNewConfiguration() {
         print("🔧 [FaceDetectorSDK] Configuration changed, updating components...")
         
@@ -886,7 +814,6 @@ extension JAAKFaceDetectorSDK: JAAKProgressiveRecorderDelegate {
         // Update other components as needed
         faceDetectionEngine?.updateConfiguration(configuration)
         videoRecorder?.updateConfiguration(configuration)
-        progressiveRecorder?.updateConfiguration(configuration)
         instructionController?.updateConfiguration(configuration)
         
         print("✅ [FaceDetectorSDK] Components updated with new configuration")
@@ -967,7 +894,6 @@ extension JAAKFaceDetectorSDK: JAAKProgressiveRecorderDelegate {
            oldConfig.autoRecorder != newConfig.autoRecorder ||
            oldConfig.progressiveAutoRecorder != newConfig.progressiveAutoRecorder {
             videoRecorder?.updateConfiguration(newConfig)
-            progressiveRecorder?.updateConfiguration(newConfig)
         }
         
         // Update instruction settings

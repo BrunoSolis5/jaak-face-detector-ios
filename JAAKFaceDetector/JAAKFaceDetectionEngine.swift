@@ -401,6 +401,15 @@ internal class JAAKFaceDetectionEngine: NSObject {
         videoNativeHeight = 0
     }
     
+    /// Reset detection state for progressive recording
+    func resetDetectionState() {
+        consecutiveNoFaceFrames = 0
+        lastFaceDetectionTime = Date()
+        currentSampleBuffer = nil
+        
+        print("🔄 [FaceDetectionEngine] Detection state reset for progressive recording")
+    }
+    
     /// Transform bounding box coordinates from MediaPipe native space to display space
     /// - Parameter boundingBox: MediaPipe bounding box in native coordinates
     /// - Returns: MediaPipe bounding box (will be transformed to display coordinates in the overlay)

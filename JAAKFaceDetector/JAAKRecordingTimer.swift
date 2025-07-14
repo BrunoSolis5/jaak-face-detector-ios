@@ -47,16 +47,40 @@ internal class JAAKRecordingTimer: UIView {
     }
     
     /// Stop the recording timer
-    func stopTimer() {
+    /// - Parameter isProgressive: if true, doesn't hide the timer to allow immediate restart
+    func stopTimer(isProgressive: Bool = false) {
         isRecording = false
         
         // Update colors for success state
         updateColorsForSuccess()
         
-        // Hide after a brief delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.hide()
+        if isProgressive {
+            // For progressive recording, reset after showing success briefly
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                self.resetForProgressive()
+            }
+        } else {
+            // Normal mode: hide after brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.hide()
+            }
         }
+    }
+    
+    /// Reset timer state for progressive recording (internal method)
+    private func resetForProgressive() {
+        currentProgress = 0.0
+        totalDuration = 0.0
+        progressLayer.strokeEnd = 0.0
+        timerLabel.text = ""
+        
+        // Hide timer completely
+        hide()
+        
+        // Reset colors to initial state
+        updateColors()
+        
+        print("✅ [RecordingTimer] Timer reset for next progressive recording")
     }
     
     /// Update recording progress
