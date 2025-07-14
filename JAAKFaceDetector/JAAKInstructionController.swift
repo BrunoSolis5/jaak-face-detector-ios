@@ -7,14 +7,6 @@ internal class JAAKInstructionController {
     
     enum InstructionTrigger {
         case onStart
-        case noFaceDetected
-        case faceDetected
-        case faceNotCentered
-        case faceTooFar
-        case faceToClose
-        case faceNotStill
-        case recordingStarted
-        case recordingCompleted
         case error(String)
     }
     
@@ -46,36 +38,20 @@ internal class JAAKInstructionController {
         showInstructionForTrigger(.onStart)
     }
     
-    /// Handle face detection message for instruction updates
-    /// - Parameter message: face detection message
-    func handleFaceDetectionMessage(_ message: JAAKFaceDetectionMessage) {
-        guard configuration.enableInstructions else { return }
-        
-        // Determine appropriate instruction trigger
-        let trigger = determineTrigger(from: message)
-        
-        // Show instruction if trigger changed or enough time has passed
-        if shouldShowInstruction(for: trigger) {
-            showInstructionForTrigger(trigger)
-        }
-    }
     
     /// Handle status changes for instruction updates
     /// - Parameter status: new detector status
     func handleStatusChange(_ status: JAAKFaceDetectorStatus) {
         guard configuration.enableInstructions else { return }
         
+        // Only show instructions for critical states, not for normal operation
         switch status {
-        case .recording:
-            showInstructionForTrigger(.recordingStarted)
-            
-        case .finished:
-            showInstructionForTrigger(.recordingCompleted)
-            
         case .error:
             showInstructionForTrigger(.error("An error occurred"))
             
         default:
+            // Don't show instructions for normal state changes like .recording or .finished
+            // These should be handled by the validation messages instead
             break
         }
     }
@@ -102,32 +78,6 @@ internal class JAAKInstructionController {
     
     // MARK: - Private Methods
     
-    private func determineTrigger(from message: JAAKFaceDetectionMessage) -> InstructionTrigger {
-        if !message.faceExists {
-            return .noFaceDetected
-        }
-        
-        if message.faceExists && message.correctPosition {
-            return .faceDetected
-        }
-        
-        // Use the specific instruction from the message label
-        let instructionText = message.label.lowercased()
-        
-        if instructionText.contains("closer") {
-            return .faceTooFar
-        } else if instructionText.contains("away") {
-            return .faceToClose
-        } else if instructionText.contains("right") || instructionText.contains("left") || 
-                  instructionText.contains("up") || instructionText.contains("down") {
-            return .faceNotCentered
-        } else if instructionText.contains("turn") || instructionText.contains("face") {
-            return .faceNotStill
-        }
-        
-        // Default fallback
-        return .faceNotCentered
-    }
     
     private func shouldShowInstruction(for trigger: InstructionTrigger) -> Bool {
         // Check if enough time has passed since last instruction
@@ -148,15 +98,7 @@ internal class JAAKInstructionController {
     
     private func isSameTrigger(_ trigger1: InstructionTrigger, _ trigger2: InstructionTrigger) -> Bool {
         switch (trigger1, trigger2) {
-        case (.onStart, .onStart),
-             (.noFaceDetected, .noFaceDetected),
-             (.faceDetected, .faceDetected),
-             (.faceNotCentered, .faceNotCentered),
-             (.faceTooFar, .faceTooFar),
-             (.faceToClose, .faceToClose),
-             (.faceNotStill, .faceNotStill),
-             (.recordingStarted, .recordingStarted),
-             (.recordingCompleted, .recordingCompleted):
+        case (.onStart, .onStart):
             return true
         case (.error(let msg1), .error(let msg2)):
             return msg1 == msg2
@@ -183,54 +125,11 @@ internal class JAAKInstructionController {
         startInstructionTimer()
     }
     
-    /// Show instruction with custom message (for direct message display)
-    /// - Parameter message: face detection message with custom text
-    func showCustomInstruction(_ message: JAAKFaceDetectionMessage) {
-        guard configuration.enableInstructions else { return }
-        
-        let trigger = determineTrigger(from: message)
-        currentTrigger = trigger
-        lastInstructionTime = Date()
-        
-        // Use the exact message label as instruction text
-        let instructionText = message.label
-        let animationName = getAnimationName(for: trigger)
-        
-        // Update instruction view with specific content (this now shows the instruction directly)
-        updateInstructionView(text: instructionText, animation: animationName)
-        
-        // Start auto-hide timer
-        startInstructionTimer()
-    }
     
     private func getInstructionText(for trigger: InstructionTrigger) -> String {
         switch trigger {
         case .onStart:
-            return "Welcome! Please position your face in the center"
-            
-        case .noFaceDetected:
-            return "No face detected. Please position your face in front of the camera"
-            
-        case .faceDetected:
-            return "Great! Face detected. Hold still"
-            
-        case .faceNotCentered:
-            return "Please center your face in the frame"
-            
-        case .faceTooFar:
-            return "Please move closer to the camera"
-            
-        case .faceToClose:
-            return "Please move away from the camera"
-            
-        case .faceNotStill:
-            return "Please hold still for better detection"
-            
-        case .recordingStarted:
-            return "Recording started. Please hold still"
-            
-        case .recordingCompleted:
-            return "Recording completed successfully!"
+            return "Welcome! Follow these instructions for best results:\n\n• Remove glasses and hat\n• Face the camera directly\n• Ensure good lighting\n• Hold still during recording"
             
         case .error(let message):
             return "Error: \(message)"
@@ -240,31 +139,7 @@ internal class JAAKInstructionController {
     private func getAnimationName(for trigger: InstructionTrigger) -> String? {
         switch trigger {
         case .onStart:
-            return "center_face"
-            
-        case .noFaceDetected:
-            return "center_face"
-            
-        case .faceDetected:
-            return "hold_still"
-            
-        case .faceNotCentered:
-            return "center_face"
-            
-        case .faceTooFar:
-            return "move_closer"
-            
-        case .faceToClose:
-            return "move_away"
-            
-        case .faceNotStill:
-            return "hold_still"
-            
-        case .recordingStarted:
-            return "hold_still"
-            
-        case .recordingCompleted:
-            return nil
+            return "initial_instructions"
             
         case .error:
             return nil
