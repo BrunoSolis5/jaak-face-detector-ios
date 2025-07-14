@@ -157,7 +157,6 @@ public class JAAKFaceDetectorUIView: UIView {
             for sublayer in previewView.layer.sublayers ?? [] {
                 if let previewLayer = sublayer as? AVCaptureVideoPreviewLayer {
                     previewLayer.frame = bounds
-                    print("📐 [JAAKFaceDetectorUIView] Updated preview layer frame to: \(bounds)")
                 }
             }
         }

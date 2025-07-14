@@ -50,11 +50,10 @@ internal class JAAKFaceTrackingOverlay: UIView {
         let changed = imageWidth != width || imageHeight != height
         imageWidth = width
         imageHeight = height
-        print("📐 [FaceTrackingOverlay] Image dimensions \(changed ? "CHANGED" : "set"): \(width) x \(height)")
+        
         
         // If dimensions changed, redraw any existing detections
         if changed && !currentDetections.isEmpty {
-            print("📐 [FaceTrackingOverlay] Redrawing due to dimension change")
             setNeedsDisplay()
         }
     }
@@ -136,7 +135,6 @@ internal class JAAKFaceTrackingOverlay: UIView {
             if currentDetections.isEmpty {
                 hide()
             }
-            print("👤 [FaceTrackingOverlay] No face detected but recent detection exists, detections cleared")
         }
     }
     
@@ -174,7 +172,6 @@ internal class JAAKFaceTrackingOverlay: UIView {
     }
     
     @objc private func orientationDidChange() {
-        print("📐 [FaceTrackingOverlay] Orientation changed, updating coordinate transformation")
         
         // Notify via notification that capture orientation should be updated
         NotificationCenter.default.post(
@@ -241,8 +238,6 @@ internal class JAAKFaceTrackingOverlay: UIView {
         let path = UIBezierPath(roundedRect: clippedRect, cornerRadius: cornerRadius)
         context.addPath(path.cgPath)
         context.strokePath()
-        
-        print("📐 [FaceTrackingOverlay] Drew detection: \(detection.boundingBox) -> \(transformedRect) clipped to \(clippedRect)")
     }
     
     /// Transform detection coordinates to view coordinates (MediaPipe official pattern)
@@ -274,12 +269,6 @@ internal class JAAKFaceTrackingOverlay: UIView {
         let transformedRect = originalRect
             .applying(CGAffineTransform(scaleX: scaleFactor, y: scaleFactor))
             .applying(CGAffineTransform(translationX: xOffset, y: yOffset))
-        
-        print("📐 [FaceTrackingOverlay] MediaPipe transform:")
-        print("📐 [FaceTrackingOverlay] Original: \(originalRect)")
-        print("📐 [FaceTrackingOverlay] Image size: \(imageSize), View size: \(viewSize)")
-        print("📐 [FaceTrackingOverlay] Scale: \(scaleFactor), Offset: (\(xOffset), \(yOffset))")
-        print("📐 [FaceTrackingOverlay] Transformed: \(transformedRect)")
         
         return transformedRect
     }

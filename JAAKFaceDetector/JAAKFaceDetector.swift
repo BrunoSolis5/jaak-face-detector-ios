@@ -518,10 +518,9 @@ public class JAAKFaceDetectorSDK: NSObject {
         faceTrackingOverlay = JAAKFaceTrackingOverlay(configuration: configuration.faceTrackerStyles)
         print("✅ [FaceDetectorSDK] Face tracking overlay created")
         
-        // Always create recording timer for dynamic visibility
+        // Always create recording timer
         recordingTimer = JAAKRecordingTimer(configuration: configuration.timerStyles)
-        recordingTimer?.isHidden = configuration.hideTimer
-        print("✅ [FaceDetectorSDK] Recording timer created, hidden: \(configuration.hideTimer)")
+        print("✅ [FaceDetectorSDK] Recording timer created")
         
         // Initialize instruction components (tutorial-style instructions)
         if configuration.enableInstructions {
@@ -556,21 +555,40 @@ public class JAAKFaceDetectorSDK: NSObject {
     }
     
     private func checkPermissions() throws {
-        // Check camera permission
-        if !JAAKPermissionManager.isCameraAuthorized() {
-            throw JAAKFaceDetectorError(
-                label: "Camera permission not granted",
-                code: "CAMERA_PERMISSION_DENIED"
-            )
+        print("🔐 [FaceDetectorSDK] Checking permissions...")
+        print("🔐 [FaceDetectorSDK] enableMicrophone: \(configuration.enableMicrophone)")
+        print("🔐 [FaceDetectorSDK] Camera authorized: \(JAAKPermissionManager.isCameraAuthorized())")
+        print("🔐 [FaceDetectorSDK] Microphone authorized: \(JAAKPermissionManager.isMicrophoneAuthorized())")
+        
+        // Request permissions using JAAKPermissionManager
+        // This will trigger permission prompts if needed
+        
+        let semaphore = DispatchSemaphore(value: 0)
+        var permissionError: JAAKFaceDetectorError?
+        
+        print("🔐 [FaceDetectorSDK] Requesting required permissions...")
+        JAAKPermissionManager.requestRequiredPermissions(enableMicrophone: configuration.enableMicrophone) { granted, error in
+            print("🔐 [FaceDetectorSDK] Permission request completed - granted: \(granted)")
+            if let error = error {
+                print("🔐 [FaceDetectorSDK] Permission error: \(error)")
+            }
+            
+            if !granted {
+                permissionError = error ?? JAAKFaceDetectorError(
+                    label: "Required permissions not granted",
+                    code: "PERMISSIONS_DENIED"
+                )
+            }
+            semaphore.signal()
         }
         
-        // Check microphone permission if needed
-        if configuration.enableMicrophone && !JAAKPermissionManager.isMicrophoneAuthorized() {
-            throw JAAKFaceDetectorError(
-                label: "Microphone permission not granted",
-                code: "MICROPHONE_PERMISSION_DENIED"
-            )
+        semaphore.wait()
+        
+        if let error = permissionError {
+            throw error
         }
+        
+        print("✅ [FaceDetectorSDK] All required permissions granted")
     }
     
     private func updateStatus(_ newStatus: JAAKFaceDetectorStatus) {
@@ -597,7 +615,6 @@ public class JAAKFaceDetectorSDK: NSObject {
 extension JAAKFaceDetectorSDK: JAAKCameraManagerDelegate {
     func cameraManager(_ manager: JAAKCameraManager, didOutput sampleBuffer: CMSampleBuffer) {
         // Process frame for face detection directly (MediaPipe handles its own threading)
-        print("📹 [FaceDetectorSDK] Received frame from camera, processing for face detection")
         let currentTimeMs = Date().timeIntervalSince1970 * 1000
         
         // Process on main thread to avoid Sendable issues with CMSampleBuffer
@@ -617,7 +634,6 @@ extension JAAKFaceDetectorSDK: JAAKCameraManagerDelegate {
 
 extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didDetectFace message: JAAKFaceDetectionMessage, boundingBox: CGRect, videoNativeSize: CGSize) {
-        print("🎯 [FaceDetectorSDK] Face detection delegate called: \(message.label)")
         
         // Update overlay with image dimensions
         faceTrackingOverlay?.setImageDimensions(width: videoNativeSize.width, height: videoNativeSize.height)
@@ -630,16 +646,14 @@ extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
                 isValid: message.correctPosition,
                 confidence: confidence
             )
-            print("👤 [FaceDetectorSDK] Face tracking overlay updated and shown")
         } else {
             // Clear detections when no face is detected
             faceTrackingOverlay?.clearDetections()
             faceTrackingOverlay?.notifyNoFaceDetected()
-            print("👤 [FaceDetectorSDK] No face detected (faceExists: \(message.faceExists), boundingBox: \(boundingBox)), overlay cleared")
+            
         }
         
         // Handle auto-recording with detailed debugging
-        print("🔍 [AutoRecorder Debug] autoRecorder: \(configuration.autoRecorder), status: \(status), faceExists: \(message.faceExists), correctPosition: \(message.correctPosition)")
         
         if configuration.autoRecorder && (status == .running || status == .recording) {
             if message.faceExists && message.correctPosition {
@@ -735,8 +749,6 @@ extension JAAKFaceDetectorSDK: JAAKVideoRecorderDelegate {
         // Ensure status is back to running for auto-recording detection (with delay to allow UI to update)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             self.updateStatus(.running)
-            print("✅ [FaceDetectorSDK] Status set to .running - ready for next progressive recording")
-            print("🎯 [FaceDetectorSDK] Auto-recording enabled: \(self.configuration.autoRecorder)")
         }
     }
     
@@ -866,8 +878,8 @@ extension JAAKFaceDetectorSDK {
     /// Check if configuration changes require a full restart
     private func configurationRequiresRestart(from oldConfig: JAAKFaceDetectorConfiguration, to newConfig: JAAKFaceDetectorConfiguration) -> Bool {
         // These changes require restart
-        return oldConfig.enableMicrophone != newConfig.enableMicrophone ||
-               oldConfig.cameraPosition != newConfig.cameraPosition ||
+        // enableMicrophone is handled separately to avoid full restart
+        return oldConfig.cameraPosition != newConfig.cameraPosition ||
                oldConfig.videoQuality != newConfig.videoQuality ||
                oldConfig.disableFaceDetection != newConfig.disableFaceDetection ||
                oldConfig.useOfflineModel != newConfig.useOfflineModel
@@ -878,8 +890,9 @@ extension JAAKFaceDetectorSDK {
         
         // Update UI components that can change dynamically
         
-        if oldConfig.hideTimer != newConfig.hideTimer {
-            updateTimerVisibility(hidden: newConfig.hideTimer)
+        // Handle microphone changes without full restart
+        if oldConfig.enableMicrophone != newConfig.enableMicrophone {
+            handleMicrophoneConfigurationChange(enabled: newConfig.enableMicrophone)
         }
         
         if oldConfig.muteFaceDetectionMessages != newConfig.muteFaceDetectionMessages {
@@ -914,11 +927,20 @@ extension JAAKFaceDetectorSDK {
         }
     }
     
-    
-    private func updateTimerVisibility(hidden: Bool) {
-        DispatchQueue.main.async { [weak self] in
-            self?.recordingTimer?.isHidden = hidden
-            print("⏰ [FaceDetectorSDK] Timer visibility updated: \(hidden ? "hidden" : "visible")")
+    private func handleMicrophoneConfigurationChange(enabled: Bool) {
+        print("🎤 [FaceDetectorSDK] Microphone configuration changed to: \(enabled)")
+        
+        // Update the camera manager's microphone setup
+        guard let cameraManager = cameraManager else {
+            print("❌ [FaceDetectorSDK] Camera manager not available for microphone update")
+            return
+        }
+        
+        do {
+            try cameraManager.updateMicrophoneConfiguration(enabled: enabled)
+            print("✅ [FaceDetectorSDK] Microphone configuration updated successfully")
+        } catch {
+            print("❌ [FaceDetectorSDK] Failed to update microphone configuration: \(error)")
         }
     }
     
@@ -973,7 +995,6 @@ internal class CameraPreviewView: UIView {
                 // Update orientation for proper video display like native camera app
                 updatePreviewOrientation()
                 
-                print("📐 [CameraPreviewView] Updated preview layer frame to: \(bounds)")
             } else {
                 // Update other sublayers as well
                 sublayer.frame = bounds

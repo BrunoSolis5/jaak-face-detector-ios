@@ -95,8 +95,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
     private func loadMediaPipeModel() throws {
         // Load MediaPipe BlazeFace model from Resources (same as webcomponent)
         let bundle = Bundle(for: JAAKFaceDetectionEngine.self)
-        print("🔍 [FaceDetectionEngine] Bundle path: \(bundle.bundlePath)")
-        print("🔍 [FaceDetectionEngine] Bundle resource URLs: \(bundle.urls(forResourcesWithExtension: "tflite", subdirectory: nil) ?? [])")
+        
         
         // Try multiple possible paths
         var modelPath: String?
@@ -475,7 +474,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
 
 extension JAAKFaceDetectionEngine: FaceDetectorLiveStreamDelegate {
     func faceDetector(_ faceDetector: FaceDetector, didFinishDetection result: FaceDetectorResult?, timestampInMilliseconds: Int, error: Error?) {
-        print("🎯 [FaceDetectionEngine] Live stream delegate called with timestamp: \(timestampInMilliseconds)ms")
+        
         
         if let error = error {
             print("❌ [FaceDetectionEngine] Live stream error: \(error)")
@@ -493,7 +492,6 @@ extension JAAKFaceDetectionEngine: FaceDetectorLiveStreamDelegate {
             return
         }
         
-        print("📊 [FaceDetectionEngine] Live stream detection result: \(result.detections.count) faces found")
         
         // Handle MediaPipe results with defensive error handling
         handleMediaPipeResults(result)
