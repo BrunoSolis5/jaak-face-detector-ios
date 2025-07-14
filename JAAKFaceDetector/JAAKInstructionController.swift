@@ -83,7 +83,7 @@ internal class JAAKInstructionController {
         // Check if enough time has passed since last instruction
         if let lastTime = lastInstructionTime {
             let timeSinceLastInstruction = Date().timeIntervalSince(lastTime)
-            if timeSinceLastInstruction < configuration.instructionReplayDelay {
+            if timeSinceLastInstruction < configuration.instructionDuration {
                 return false
             }
         }
@@ -129,7 +129,7 @@ internal class JAAKInstructionController {
     private func getInstructionText(for trigger: InstructionTrigger) -> String {
         switch trigger {
         case .onStart:
-            return "Welcome! Follow these instructions for best results:\n\n• Remove glasses and hat\n• Face the camera directly\n• Ensure good lighting\n• Hold still during recording"
+            return "" // No welcome message, just show the instruction sequence
             
         case .error(let message):
             return "Error: \(message)"
@@ -154,8 +154,13 @@ internal class JAAKInstructionController {
     private func startInstructionTimer() {
         stopInstructionTimer()
         
-        // Auto-hide after configured delay
-        instructionTimer = Timer.scheduledTimer(withTimeInterval: configuration.instructionDelay + 1.0, repeats: false) { [weak self] _ in
+        // Calculate total time needed for all instructions
+        // Each instruction shows for instructionDuration (no delay between instructions)
+        let instructionCount = configuration.instructionsText.isEmpty ? 4 : configuration.instructionsText.count // 4 default instructions
+        let totalTime = TimeInterval(instructionCount) * configuration.instructionDuration + 2.0 // Extra buffer
+        
+        // Auto-hide after all instructions complete
+        instructionTimer = Timer.scheduledTimer(withTimeInterval: totalTime, repeats: false) { [weak self] _ in
             self?.instructionView.hideInstructions()
         }
     }
@@ -188,6 +193,11 @@ extension JAAKInstructionController: JAAKInstructionViewDelegate {
             currentTrigger = nil
             lastInstructionTime = nil
         }
+    }
+    
+    func instructionViewHelpButtonTapped(_ instructionView: JAAKInstructionView) {
+        // When help button is tapped, restart the instruction sequence
+        startInstructions()
     }
 }
 

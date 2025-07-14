@@ -39,7 +39,6 @@ public class JAAKFaceDetectorSDK: NSObject {
     private var instructionView: JAAKInstructionView?
     private var instructionController: JAAKInstructionController?
     private var validationMessageView: JAAKValidationMessageView?
-    private var helpButton: UIButton?
     
     
     // MARK: - Initialization
@@ -418,20 +417,19 @@ public class JAAKFaceDetectorSDK: NSObject {
             print("⚠️ [JAAKFaceDetector] Recording timer is nil, not adding to view")
         }
         
-        // Add instruction view (for initial tutorial-style instructions) with responsive layout
+        // Add instruction view as full-screen overlay (includes help button)
         if let instructionView = instructionView {
             instructionView.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(instructionView)
             
             NSLayoutConstraint.activate([
-                instructionView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-                instructionView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-                instructionView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
-                instructionView.heightAnchor.constraint(lessThanOrEqualToConstant: 180),
-                instructionView.heightAnchor.constraint(greaterThanOrEqualToConstant: 120)
+                instructionView.topAnchor.constraint(equalTo: view.topAnchor),
+                instructionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                instructionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                instructionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
             ])
             
-            print("✅ [FaceDetectorSDK] Instruction view added with responsive constraints")
+            print("✅ [FaceDetectorSDK] Instruction view added as full-screen overlay")
         }
         
         // Add validation message view (for positioning guidance) with responsive layout
@@ -449,21 +447,6 @@ public class JAAKFaceDetectorSDK: NSObject {
             print("✅ [FaceDetectorSDK] Validation message view added with responsive constraints")
         }
         
-        // Add help button with responsive positioning
-        if let helpButton = helpButton {
-            helpButton.translatesAutoresizingMaskIntoConstraints = false
-            view.addSubview(helpButton)
-            view.bringSubviewToFront(helpButton)
-            
-            NSLayoutConstraint.activate([
-                helpButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-                helpButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
-                helpButton.widthAnchor.constraint(equalToConstant: 40),
-                helpButton.heightAnchor.constraint(equalToConstant: 40)
-            ])
-            
-            print("✅ [FaceDetectorSDK] Help button added with responsive constraints")
-        }
         
         previewView = view
         return view
@@ -519,6 +502,7 @@ public class JAAKFaceDetectorSDK: NSObject {
             instructionView = JAAKInstructionView(configuration: configuration)
             instructionController = JAAKInstructionController(configuration: configuration, instructionView: instructionView!)
             instructionController?.delegate = self
+            // The instruction controller will handle the instruction view delegate
         } else {
             print("📋 [FaceDetectorSDK] Skipping instruction view (enableInstructions = false)")
         }
@@ -527,17 +511,6 @@ public class JAAKFaceDetectorSDK: NSObject {
         validationMessageView = JAAKValidationMessageView()
         print("✅ [FaceDetectorSDK] Validation message view created")
         
-        // Create help button to reactivate instructions
-        helpButton = HelpButton()
-        helpButton?.setTitle("?", for: .normal)
-        helpButton?.titleLabel?.font = UIFont.systemFont(ofSize: 20, weight: .bold)
-        helpButton?.setTitleColor(.white, for: .normal)
-        helpButton?.backgroundColor = UIColor.black.withAlphaComponent(0.6)
-        helpButton?.layer.cornerRadius = 20
-        helpButton?.clipsToBounds = true
-        helpButton?.isUserInteractionEnabled = true
-        helpButton?.addTarget(self, action: #selector(helpButtonTapped), for: .touchUpInside)
-        print("✅ [FaceDetectorSDK] Help button created")
         
         // Listen for orientation change notifications from overlay
         NotificationCenter.default.addObserver(
@@ -578,9 +551,6 @@ public class JAAKFaceDetectorSDK: NSObject {
         }
     }
     
-    @objc private func helpButtonTapped() {
-        instructionController?.startInstructions()
-    }
     
     @objc private func updateCaptureOrientation() {
         print("📱 [FaceDetectorSDK] Updating capture orientation due to device rotation")
@@ -791,6 +761,7 @@ extension JAAKFaceDetectorSDK: JAAKInstructionControllerDelegate {
     }
 }
 
+
 // MARK: - Configuration Updates
 
 extension JAAKFaceDetectorSDK {
@@ -891,7 +862,7 @@ extension JAAKFaceDetectorSDK {
         // Update instruction settings
         if oldConfig.enableInstructions != newConfig.enableInstructions ||
            oldConfig.instructionDelay != newConfig.instructionDelay ||
-           oldConfig.instructionReplayDelay != newConfig.instructionReplayDelay ||
+           oldConfig.instructionDuration != newConfig.instructionDuration ||
            oldConfig.instructionsButtonText != newConfig.instructionsButtonText {
             instructionController?.updateConfiguration(newConfig)
             updateInstructionsVisibility(enabled: newConfig.enableInstructions)
@@ -908,8 +879,15 @@ extension JAAKFaceDetectorSDK {
     
     private func updateInstructionsVisibility(enabled: Bool) {
         DispatchQueue.main.async { [weak self] in
-            self?.instructionView?.isHidden = !enabled
-            self?.helpButton?.isHidden = !enabled
+            // The instruction view is always visible for the help button
+            // Only hide the help button itself when instructions are disabled
+            if let instructionView = self?.instructionView {
+                if enabled {
+                    instructionView.isHidden = false
+                } else {
+                    instructionView.isHidden = true
+                }
+            }
             print("📋 [FaceDetectorSDK] Instructions visibility updated: \(enabled ? "enabled" : "disabled")")
         }
     }
@@ -1073,6 +1051,7 @@ internal class JAAKValidationMessageView: UIView {
         // Initial state
         isHidden = true
         alpha = 0.0
+        isUserInteractionEnabled = false
     }
     
     private func setupLayout() {
@@ -1102,6 +1081,7 @@ internal class JAAKValidationMessageView: UIView {
     
     private func show() {
         isHidden = false
+        isUserInteractionEnabled = false // Validation messages should not intercept touches
         alpha = 0.0
         transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
         
@@ -1117,6 +1097,7 @@ internal class JAAKValidationMessageView: UIView {
             self.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
         } completion: { _ in
             self.isHidden = true
+            self.isUserInteractionEnabled = false
         }
     }
     
@@ -1151,27 +1132,4 @@ internal class JAAKValidationMessageView: UIView {
     }
 }
 
-// MARK: - HelpButton
-
-/// Custom button class to ensure proper touch handling
-internal class HelpButton: UIButton {
-    
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        // Only respond to touches within the exact button bounds
-        let result = super.point(inside: point, with: event)
-        if result {
-            print("🎯 [HelpButton] Touch detected at point: \(point) within bounds: \(bounds)")
-        }
-        return result
-    }
-    
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // Ensure the button only captures touches within its bounds
-        let hitView = super.hitTest(point, with: event)
-        if hitView == self {
-            print("🎯 [HelpButton] Hit test successful for point: \(point)")
-        }
-        return hitView
-    }
-}
 

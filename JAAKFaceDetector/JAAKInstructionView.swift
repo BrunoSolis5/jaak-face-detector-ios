@@ -16,13 +16,11 @@ internal class JAAKInstructionView: UIView {
         let text: String
         let animation: String?
         let duration: TimeInterval
-        let delay: TimeInterval
         
-        init(text: String, animation: String? = nil, duration: TimeInterval = 3.0, delay: TimeInterval = 0.5) {
+        init(text: String, animation: String? = nil, duration: TimeInterval = 2.0) {
             self.text = text
             self.animation = animation
             self.duration = duration
-            self.delay = delay
         }
     }
     
@@ -38,9 +36,8 @@ internal class JAAKInstructionView: UIView {
     private let contentView = UIView()
     private let instructionLabel = UILabel()
     private let animationContainerView = UIView()
-    private let replayButton = UIButton()
-    private let skipButton = UIButton()
-    private let progressView = UIProgressView()
+    private let progressView = UIProgressView(progressViewStyle: .default)
+    private let helpButton = UIButton()
     
     // Animation
     private var currentAnimationView: UIView?
@@ -72,15 +69,21 @@ internal class JAAKInstructionView: UIView {
         
         currentState = .showing
         currentStepIndex = 0
-        isHidden = false
         
-        // Animate in
-        alpha = 0.0
-        transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+        // Show the instruction content
+        backgroundView.isHidden = false
+        backgroundView.alpha = 0.0
+        backgroundView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+        
+        contentView.isHidden = false
+        contentView.alpha = 0.0
+        contentView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
         
         UIView.animate(withDuration: 0.4, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: [], animations: {
-            self.alpha = 1.0
-            self.transform = .identity
+            self.backgroundView.alpha = 1.0
+            self.backgroundView.transform = .identity
+            self.contentView.alpha = 1.0
+            self.contentView.transform = .identity
         }) { _ in
             self.startInstructionSequence()
         }
@@ -92,10 +95,13 @@ internal class JAAKInstructionView: UIView {
         stopCurrentTimer()
         
         UIView.animate(withDuration: 0.3) {
-            self.alpha = 0.0
-            self.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+            self.backgroundView.alpha = 0.0
+            self.backgroundView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+            self.contentView.alpha = 0.0
+            self.contentView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
         } completion: { _ in
-            self.isHidden = true
+            self.backgroundView.isHidden = true
+            self.contentView.isHidden = true
             self.delegate?.instructionView(self, didComplete: false)
         }
     }
@@ -115,6 +121,7 @@ internal class JAAKInstructionView: UIView {
         stopCurrentTimer()
         showCurrentStep()
     }
+    
     
     /// Update instruction progress
     /// - Parameter progress: progress from 0.0 to 1.0
@@ -166,7 +173,7 @@ internal class JAAKInstructionView: UIView {
         addSubview(contentView)
         
         // Instruction label
-        instructionLabel.font = UIFont.systemFont(ofSize: 18, weight: .medium)
+        instructionLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
         instructionLabel.textColor = .white
         instructionLabel.textAlignment = .center
         instructionLabel.numberOfLines = 0
@@ -176,33 +183,35 @@ internal class JAAKInstructionView: UIView {
         animationContainerView.backgroundColor = .clear
         contentView.addSubview(animationContainerView)
         
-        // Replay button
-        replayButton.setTitle(configuration.instructionsButtonText, for: .normal)
-        replayButton.setTitleColor(.white, for: .normal)
-        replayButton.backgroundColor = UIColor.white.withAlphaComponent(0.2)
-        replayButton.layer.cornerRadius = 8
-        replayButton.addTarget(self, action: #selector(replayButtonTapped), for: .touchUpInside)
-        contentView.addSubview(replayButton)
-        
-        // Skip button
-        skipButton.setTitle("Skip", for: .normal)
-        skipButton.setTitleColor(.white, for: .normal)
-        skipButton.backgroundColor = UIColor.white.withAlphaComponent(0.1)
-        skipButton.layer.cornerRadius = 8
-        skipButton.addTarget(self, action: #selector(skipButtonTapped), for: .touchUpInside)
-        contentView.addSubview(skipButton)
-        
         // Progress view
         progressView.progressTintColor = .white
         progressView.trackTintColor = UIColor.white.withAlphaComponent(0.3)
+        progressView.progress = 0.0
         contentView.addSubview(progressView)
+        
+        // Help button (?) - positioned at top-left of the main view
+        helpButton.setTitle("?", for: .normal)
+        helpButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .bold)
+        helpButton.setTitleColor(.white, for: .normal)
+        helpButton.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        helpButton.layer.cornerRadius = 16
+        helpButton.clipsToBounds = true
+        helpButton.addTarget(self, action: #selector(helpButtonTapped), for: .touchUpInside)
+        addSubview(helpButton) // Add to main view, not contentView
         
         // Layout
         setupLayout()
         
-        // Initial state
-        isHidden = true
-        alpha = 0.0
+        // Initial state - view is always visible for help button, but content is hidden
+        isHidden = false
+        alpha = 1.0
+        isUserInteractionEnabled = true
+        
+        // Hide the instruction content initially
+        backgroundView.isHidden = true
+        backgroundView.alpha = 0.0
+        contentView.isHidden = true
+        contentView.alpha = 0.0
     }
     
     private func setupLayout() {
@@ -210,52 +219,46 @@ internal class JAAKInstructionView: UIView {
         contentView.translatesAutoresizingMaskIntoConstraints = false
         instructionLabel.translatesAutoresizingMaskIntoConstraints = false
         animationContainerView.translatesAutoresizingMaskIntoConstraints = false
-        replayButton.translatesAutoresizingMaskIntoConstraints = false
-        skipButton.translatesAutoresizingMaskIntoConstraints = false
         progressView.translatesAutoresizingMaskIntoConstraints = false
+        helpButton.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            // Background
-            backgroundView.topAnchor.constraint(equalTo: topAnchor),
-            backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            // Background - positioned at bottom of screen
+            backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            backgroundView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            backgroundView.heightAnchor.constraint(lessThanOrEqualToConstant: 120),
+            backgroundView.heightAnchor.constraint(greaterThanOrEqualToConstant: 80),
             
-            // Content
-            contentView.topAnchor.constraint(equalTo: topAnchor, constant: 20),
-            contentView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
-            contentView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
-            contentView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -20),
+            // Content - positioned relative to background
+            contentView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 12),
+            contentView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 12),
+            contentView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -12),
+            contentView.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -12),
             
             // Animation container
             animationContainerView.topAnchor.constraint(equalTo: contentView.topAnchor),
             animationContainerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             animationContainerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            animationContainerView.heightAnchor.constraint(equalToConstant: 120),
+            animationContainerView.heightAnchor.constraint(equalToConstant: 60),
             
             // Instruction label
-            instructionLabel.topAnchor.constraint(equalTo: animationContainerView.bottomAnchor, constant: 20),
+            instructionLabel.topAnchor.constraint(equalTo: animationContainerView.bottomAnchor, constant: 8),
             instructionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             instructionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
             // Progress view
-            progressView.topAnchor.constraint(equalTo: instructionLabel.bottomAnchor, constant: 20),
+            progressView.topAnchor.constraint(equalTo: instructionLabel.bottomAnchor, constant: 8),
             progressView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             progressView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             progressView.heightAnchor.constraint(equalToConstant: 4),
+            progressView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
             
-            // Buttons
-            replayButton.topAnchor.constraint(equalTo: progressView.bottomAnchor, constant: 20),
-            replayButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            replayButton.widthAnchor.constraint(equalTo: contentView.widthAnchor, multiplier: 0.45),
-            replayButton.heightAnchor.constraint(equalToConstant: 44),
-            replayButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            
-            skipButton.topAnchor.constraint(equalTo: progressView.bottomAnchor, constant: 20),
-            skipButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            skipButton.widthAnchor.constraint(equalTo: contentView.widthAnchor, multiplier: 0.45),
-            skipButton.heightAnchor.constraint(equalToConstant: 44),
-            skipButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+            // Help button (?) - positioned at top-left of the full screen
+            helpButton.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            helpButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
+            helpButton.widthAnchor.constraint(equalToConstant: 32),
+            helpButton.heightAnchor.constraint(equalToConstant: 32)
         ])
     }
     
@@ -264,26 +267,33 @@ internal class JAAKInstructionView: UIView {
         
         // Use configured instructions if available, otherwise use defaults
         let instructionTexts = configuration.instructionsText.isEmpty ? getDefaultInstructions() : configuration.instructionsText
-        let instructionAnimations = configuration.instructionsAnimations
+        let instructionAnimations = configuration.instructionsAnimations.isEmpty ? getDefaultAnimations() : configuration.instructionsAnimations
         
         instructionSteps = instructionTexts.enumerated().map { index, text in
             let animation = index < instructionAnimations.count ? instructionAnimations[index] : nil
             return InstructionStep(
                 text: text,
                 animation: animation,
-                duration: configuration.instructionDelay,
-                delay: configuration.instructionReplayDelay
+                duration: configuration.instructionDuration
             )
         }
     }
     
     private func getDefaultInstructions() -> [String] {
         return [
-            "Welcome to face detection",
-            "Position your face in the center of the screen",
-            "Make sure your face is clearly visible",
-            "Stay still while we detect your face",
-            "Great! You're ready to start"
+            "Remove glasses for better detection",
+            "Remove hat or cap",
+            "Remove headphones or earbuds", 
+            "Ensure good lighting on your face"
+        ]
+    }
+    
+    private func getDefaultAnimations() -> [String] {
+        return [
+            "https://raw.githubusercontent.com/jaak-ai/jaak-storage/main/animations/rive/glasses.riv",
+            "https://raw.githubusercontent.com/jaak-ai/jaak-storage/main/animations/rive/hat.riv",
+            "https://raw.githubusercontent.com/jaak-ai/jaak-storage/main/animations/rive/headphones.riv",
+            "https://raw.githubusercontent.com/jaak-ai/jaak-storage/main/animations/rive/light.riv"
         ]
     }
     
@@ -323,10 +333,8 @@ internal class JAAKInstructionView: UIView {
         currentStepIndex += 1
         
         if currentStepIndex < instructionSteps.count {
-            // Show next step after delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + instructionSteps[currentStepIndex - 1].delay) {
-                self.showCurrentStep()
-            }
+            // Show next step immediately without delay
+            showCurrentStep()
         } else {
             completeInstructions()
         }
@@ -444,12 +452,25 @@ internal class JAAKInstructionView: UIView {
         stepTimer = nil
     }
     
-    @objc private func replayButtonTapped() {
-        replayCurrentInstruction()
+    
+    @objc private func helpButtonTapped() {
+        // Delegate back to the main controller
+        delegate?.instructionViewHelpButtonTapped(self)
     }
     
-    @objc private func skipButtonTapped() {
-        skipCurrentInstruction()
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        // Always allow touches on help button
+        if let hitView = helpButton.hitTest(convert(point, to: helpButton), with: event) {
+            return hitView
+        }
+        
+        // For instruction content, only allow touches when background and content are visible
+        if !backgroundView.isHidden && backgroundView.alpha > 0.0 && !contentView.isHidden && contentView.alpha > 0.0 {
+            return super.hitTest(point, with: event)
+        }
+        
+        // If instructions are hidden, don't intercept touches (let them pass through)
+        return nil
     }
     
     deinit {
@@ -461,4 +482,5 @@ internal class JAAKInstructionView: UIView {
 
 protocol JAAKInstructionViewDelegate: AnyObject {
     func instructionView(_ instructionView: JAAKInstructionView, didComplete completed: Bool)
+    func instructionViewHelpButtonTapped(_ instructionView: JAAKInstructionView)
 }

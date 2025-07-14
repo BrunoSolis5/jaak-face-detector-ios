@@ -56,8 +56,8 @@ public struct JAAKFaceDetectorConfiguration {
     
     // Instruction Settings
     public var enableInstructions: Bool = false
-    public var instructionDelay: TimeInterval = 3.0
-    public var instructionReplayDelay: TimeInterval = 3.0
+    public var instructionDelay: TimeInterval = 5.0      // Time each instruction is displayed
+    public var instructionDuration: TimeInterval = 2.0   // Duration each instruction stays visible
     public var instructionsButtonText: String = "Show Instructions"
     
     // Instruction Content
