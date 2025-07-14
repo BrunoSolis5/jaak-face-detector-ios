@@ -56,8 +56,6 @@
 		};
 		8AF9E3CD2E1EFDB800EEA8B3 /* JAAKFaceDetectorTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = JAAKFaceDetectorTests;
 			sourceTree = "<group>";
 		};

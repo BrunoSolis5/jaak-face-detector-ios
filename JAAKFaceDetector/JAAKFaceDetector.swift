@@ -38,7 +38,7 @@ public class JAAKFaceDetectorSDK: NSObject {
     private var recordingTimer: JAAKRecordingTimer?
     private var instructionView: JAAKInstructionView?
     private var instructionController: JAAKInstructionController?
-    private var validationMessageView: JAAKValidationMessageView?
+    private var assistanceMessageView: JAAKAssistanceMessageView?
     
     
     // MARK: - Initialization
@@ -417,7 +417,23 @@ public class JAAKFaceDetectorSDK: NSObject {
             print("⚠️ [JAAKFaceDetector] Recording timer is nil, not adding to view")
         }
         
-        // Add instruction view as full-screen overlay (includes help button)
+        
+        // Add assistance message view as full-screen overlay
+        if let assistanceMessageView = assistanceMessageView {
+            assistanceMessageView.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(assistanceMessageView)
+            
+            NSLayoutConstraint.activate([
+                assistanceMessageView.topAnchor.constraint(equalTo: view.topAnchor),
+                assistanceMessageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                assistanceMessageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                assistanceMessageView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            ])
+            
+            print("✅ [FaceDetectorSDK] Assistance message view added as full-screen overlay")
+        }
+        
+        // Add instruction view as full-screen overlay (includes help button) - ON TOP of assistance messages
         if let instructionView = instructionView {
             instructionView.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(instructionView)
@@ -430,21 +446,6 @@ public class JAAKFaceDetectorSDK: NSObject {
             ])
             
             print("✅ [FaceDetectorSDK] Instruction view added as full-screen overlay")
-        }
-        
-        // Add validation message view (for positioning guidance) with responsive layout
-        if let validationMessageView = validationMessageView {
-            validationMessageView.translatesAutoresizingMaskIntoConstraints = false
-            view.addSubview(validationMessageView)
-            
-            NSLayoutConstraint.activate([
-                validationMessageView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-                validationMessageView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-                validationMessageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
-                validationMessageView.heightAnchor.constraint(equalToConstant: 50)
-            ])
-            
-            print("✅ [FaceDetectorSDK] Validation message view added with responsive constraints")
         }
         
         
@@ -508,7 +509,7 @@ public class JAAKFaceDetectorSDK: NSObject {
         }
         
         // Always create validation message view (for positioning guidance)
-        validationMessageView = JAAKValidationMessageView()
+        assistanceMessageView = JAAKAssistanceMessageView(configuration: configuration)
         print("✅ [FaceDetectorSDK] Validation message view created")
         
         
@@ -642,7 +643,7 @@ extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
         
         // Show validation message (always shown for positioning guidance)
         DispatchQueue.main.async { [weak self] in
-            self?.validationMessageView?.showMessage(message.label)
+            self?.assistanceMessageView?.showMessage(message.label)
         }
         
         // Forward to delegate
@@ -987,32 +988,35 @@ internal class CameraPreviewView: UIView {
     }
 }
 
-// MARK: - JAAKValidationMessageView
+// MARK: - JAAKAssistanceMessageView
 
-/// Simple view for displaying face position validation messages
-internal class JAAKValidationMessageView: UIView {
+/// Assistance message view for displaying real-time positioning guidance
+internal class JAAKAssistanceMessageView: UIView {
     
     // MARK: - Properties
     
-    private let messageLabel = UILabel()
-    private let backgroundView = UIView()
+    private let configuration: JAAKFaceDetectorConfiguration
     private var currentMessage: String = ""
+    
+    // UI Components
+    private let backgroundView = UIView()
+    private let messageLabel = UILabel()
     
     // MARK: - Initialization
     
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    init(configuration: JAAKFaceDetectorConfiguration) {
+        self.configuration = configuration
+        super.init(frame: .zero)
         setupUI()
     }
     
     required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setupUI()
+        fatalError("init(coder:) has not been implemented")
     }
     
     // MARK: - Public Methods
     
-    /// Show validation message
+    /// Show assistance message
     /// - Parameter message: message text to display
     func showMessage(_ message: String) {
         guard message != currentMessage else { return }
@@ -1035,20 +1039,16 @@ internal class JAAKValidationMessageView: UIView {
     // MARK: - Private Methods
     
     private func setupUI() {
-        backgroundColor = .clear
-        
-        // Background view with better visibility
+        // Background
         backgroundView.backgroundColor = UIColor.black.withAlphaComponent(0.8)
-        backgroundView.layer.cornerRadius = 12
-        backgroundView.layer.borderWidth = 2
-        backgroundView.layer.borderColor = UIColor.orange.cgColor
+        backgroundView.layer.cornerRadius = 16
         addSubview(backgroundView)
         
-        // Message label with improved styling and responsive font
-        updateFontSize()
+        // Message label
+        messageLabel.font = UIFont.systemFont(ofSize: 16, weight: .medium)
         messageLabel.textColor = .white
         messageLabel.textAlignment = .center
-        messageLabel.numberOfLines = 0 // Allow unlimited lines for better adaptation
+        messageLabel.numberOfLines = 0
         messageLabel.text = ""
         messageLabel.shadowColor = UIColor.black
         messageLabel.shadowOffset = CGSize(width: 1, height: 1)
@@ -1070,77 +1070,39 @@ internal class JAAKValidationMessageView: UIView {
         messageLabel.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            // Background fills the view
-            backgroundView.topAnchor.constraint(equalTo: topAnchor),
-            backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            // Background - centered horizontally, positioned at 1/3 from bottom
+            backgroundView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            backgroundView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -120), // About 1/3 from bottom
+            backgroundView.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 32),
+            backgroundView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -32),
+            backgroundView.heightAnchor.constraint(lessThanOrEqualToConstant: 80),
+            backgroundView.heightAnchor.constraint(greaterThanOrEqualToConstant: 50),
             
-            // Message label with responsive padding
-            messageLabel.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: 8),
-            messageLabel.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 12),
-            messageLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -12),
-            messageLabel.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -8),
-            messageLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
-            messageLabel.centerYAnchor.constraint(equalTo: centerYAnchor)
+            // Content - positioned relative to background with generous padding
+            messageLabel.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 16),
+            messageLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20),
+            messageLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20),
+            messageLabel.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -16)
         ])
-        
-        // Set content compression and hugging priorities for better adaptation
-        messageLabel.setContentCompressionResistancePriority(.required, for: .vertical)
-        messageLabel.setContentHuggingPriority(.defaultHigh, for: .vertical)
     }
     
     private func show() {
         isHidden = false
-        isUserInteractionEnabled = false // Validation messages should not intercept touches
         alpha = 0.0
-        transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        backgroundView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
         
         UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: [], animations: {
             self.alpha = 1.0
-            self.transform = .identity
+            self.backgroundView.transform = .identity
         })
     }
     
     private func hide() {
         UIView.animate(withDuration: 0.2) {
             self.alpha = 0.0
-            self.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+            self.backgroundView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
         } completion: { _ in
             self.isHidden = true
-            self.isUserInteractionEnabled = false
         }
     }
-    
-    override var intrinsicContentSize: CGSize {
-        // Calculate height based on content and constraints
-        let labelSize = messageLabel.sizeThatFits(CGSize(width: bounds.width - 24, height: CGFloat.greatestFiniteMagnitude))
-        let minHeight: CGFloat = 44 // Minimum touch-friendly height
-        let maxHeight: CGFloat = 80 // Maximum to prevent excessive height
-        let calculatedHeight = max(minHeight, min(maxHeight, labelSize.height + 16))
-        
-        return CGSize(width: UIView.noIntrinsicMetric, height: calculatedHeight)
-    }
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        // Update font size based on new bounds
-        updateFontSize()
-        // Invalidate intrinsic content size when bounds change
-        invalidateIntrinsicContentSize()
-    }
-    
-    private func updateFontSize() {
-        // Responsive font sizing based on view width
-        let baseWidth: CGFloat = 320 // iPhone SE width as base
-        let currentWidth = max(bounds.width, baseWidth)
-        let scaleFactor = currentWidth / baseWidth
-        
-        let baseFontSize: CGFloat = 16
-        let scaledFontSize = max(14, min(22, baseFontSize * scaleFactor))
-        
-        messageLabel.font = UIFont.systemFont(ofSize: scaledFontSize, weight: .semibold)
-    }
 }
-
-
