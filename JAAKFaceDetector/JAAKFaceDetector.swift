@@ -39,6 +39,7 @@ public class JAAKFaceDetectorSDK: NSObject {
     private var instructionView: JAAKInstructionView?
     private var instructionController: JAAKInstructionController?
     private var assistanceMessageView: JAAKAssistanceMessageView?
+    private var watermarkImageView: UIImageView?
     
     
     // MARK: - Initialization
@@ -453,6 +454,31 @@ public class JAAKFaceDetectorSDK: NSObject {
         return view
     }
     
+    // MARK: - Watermark
+    
+    private func loadWatermarkImage() {
+        guard let watermarkImageView = watermarkImageView else { return }
+        
+        let urlString = "https://storage.googleapis.com/jaak-static/commons/powered-by-jaak.png"
+        guard let url = URL(string: urlString) else {
+            print("⚠️ [FaceDetectorSDK] Invalid watermark URL")
+            return
+        }
+        
+        // Download image asynchronously
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            guard let data = data, error == nil, let image = UIImage(data: data) else {
+                print("⚠️ [FaceDetectorSDK] Failed to load watermark image: \(error?.localizedDescription ?? "Unknown error")")
+                return
+            }
+            
+            DispatchQueue.main.async {
+                watermarkImageView.image = image
+                print("✅ [FaceDetectorSDK] Watermark image loaded successfully")
+            }
+        }.resume()
+    }
+    
     /// Create controls view for detector controls
     /// - Returns: UIView containing control buttons
     public func createControlsView() -> UIView {
@@ -511,6 +537,13 @@ public class JAAKFaceDetectorSDK: NSObject {
         // Always create validation message view (for positioning guidance)
         assistanceMessageView = JAAKAssistanceMessageView(configuration: configuration)
         print("✅ [FaceDetectorSDK] Validation message view created")
+        
+        // Create watermark image view
+        watermarkImageView = UIImageView()
+        watermarkImageView?.contentMode = .scaleAspectFit
+        watermarkImageView?.alpha = 0.6
+        loadWatermarkImage()
+        print("✅ [FaceDetectorSDK] Watermark image view created")
         
         
         // Listen for orientation change notifications from overlay

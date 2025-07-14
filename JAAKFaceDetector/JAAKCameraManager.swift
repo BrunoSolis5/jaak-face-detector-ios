@@ -488,6 +488,13 @@ extension JAAKCameraManager {
         guard let assetWriter = assetWriter,
               let outputURL = recordingOutputURL else { return }
         
+        // Check if asset writer is in a valid state to finish writing
+        guard assetWriter.status == .writing else {
+            print("⚠️ [CameraManager] Cannot finish recording - assetWriter status: \(assetWriter.status.rawValue)")
+            cleanupRecording()
+            return
+        }
+        
         // Mark inputs as finished
         videoWriterInput?.markAsFinished()
         

@@ -39,6 +39,7 @@ internal class JAAKInstructionView: UIView {
     private let animationContainerView = UIView()
     private let progressView = UIProgressView(progressViewStyle: .default)
     private let helpButton = UIButton()
+    private let watermarkImageView = UIImageView()
     
     // Animation
     private var currentAnimationView: UIView?
@@ -216,6 +217,12 @@ internal class JAAKInstructionView: UIView {
         helpButton.addTarget(self, action: #selector(helpButtonTapped), for: .touchUpInside)
         addSubview(helpButton) // Add to main view, not contentView
         
+        // Watermark - positioned at bottom-right of the main view
+        watermarkImageView.contentMode = .scaleAspectFit
+        watermarkImageView.alpha = 0.6
+        addSubview(watermarkImageView)
+        loadWatermarkImage()
+        
         // Layout
         setupLayout()
         
@@ -241,6 +248,7 @@ internal class JAAKInstructionView: UIView {
         animationContainerView.translatesAutoresizingMaskIntoConstraints = false
         progressView.translatesAutoresizingMaskIntoConstraints = false
         helpButton.translatesAutoresizingMaskIntoConstraints = false
+        watermarkImageView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
             // Backdrop - full screen overlay
@@ -285,7 +293,13 @@ internal class JAAKInstructionView: UIView {
             helpButton.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 16),
             helpButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
             helpButton.widthAnchor.constraint(equalToConstant: 32),
-            helpButton.heightAnchor.constraint(equalToConstant: 32)
+            helpButton.heightAnchor.constraint(equalToConstant: 32),
+            
+            // Watermark - positioned at bottom-right of the full screen
+            watermarkImageView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -12),
+            watermarkImageView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -12),
+            watermarkImageView.widthAnchor.constraint(equalToConstant: 120),
+            watermarkImageView.heightAnchor.constraint(equalToConstant: 30)
         ])
     }
     
@@ -582,6 +596,27 @@ internal class JAAKInstructionView: UIView {
     private func stopCurrentTimer() {
         stepTimer?.invalidate()
         stepTimer = nil
+    }
+    
+    private func loadWatermarkImage() {
+        let urlString = "https://storage.googleapis.com/jaak-static/commons/powered-by-jaak.png"
+        guard let url = URL(string: urlString) else {
+            print("⚠️ [JAAKInstructionView] Invalid watermark URL")
+            return
+        }
+        
+        // Download image asynchronously
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            guard let data = data, error == nil, let image = UIImage(data: data) else {
+                print("⚠️ [JAAKInstructionView] Failed to load watermark image: \(error?.localizedDescription ?? "Unknown error")")
+                return
+            }
+            
+            DispatchQueue.main.async {
+                self.watermarkImageView.image = image
+                print("✅ [JAAKInstructionView] Watermark image loaded successfully")
+            }
+        }.resume()
     }
     
     
