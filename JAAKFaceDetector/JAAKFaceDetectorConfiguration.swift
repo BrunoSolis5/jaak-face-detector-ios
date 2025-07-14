@@ -38,7 +38,6 @@ public struct JAAKFaceDetectorConfiguration {
     
     // Face Detection Settings
     public var disableFaceDetection: Bool = false
-    public var hideFaceTracker: Bool = false
     public var muteFaceDetectionMessages: Bool = false
     public var useOfflineModel: Bool = false            // Reserved for future use
     

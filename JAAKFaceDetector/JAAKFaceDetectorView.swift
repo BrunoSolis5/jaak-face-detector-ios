@@ -118,7 +118,7 @@ public struct JAAKFaceDetectorView: UIViewRepresentable {
     
     private func configurationMatches(_ config1: JAAKFaceDetectorConfiguration, _ config2: JAAKFaceDetectorConfiguration) -> Bool {
         // Only compare properties that require full recreation of the detector
-        // Dynamic properties like hideFaceTracker, hideTimer, etc. will be handled by updateConfiguration
+        // Dynamic properties like hideTimer, etc. will be handled by updateConfiguration
         return config1.enableMicrophone == config2.enableMicrophone &&
                config1.cameraPosition == config2.cameraPosition &&
                config1.videoQuality == config2.videoQuality &&

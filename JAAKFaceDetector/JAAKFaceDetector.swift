@@ -504,19 +504,14 @@ public class JAAKFaceDetectorSDK: NSObject {
         
         
         // Initialize UI components
-        if !configuration.hideFaceTracker {
-            faceTrackingOverlay = JAAKFaceTrackingOverlay(configuration: configuration.faceTrackerStyles)
-            print("✅ [FaceDetectorSDK] Face tracking overlay created")
-        } else {
-            print("⚠️ [FaceDetectorSDK] Face tracking overlay hidden by configuration")
-        }
+        // Always create face tracking overlay
+        faceTrackingOverlay = JAAKFaceTrackingOverlay(configuration: configuration.faceTrackerStyles)
+        print("✅ [FaceDetectorSDK] Face tracking overlay created")
         
-        if !configuration.hideTimer {
-            recordingTimer = JAAKRecordingTimer(configuration: configuration.timerStyles)
-            print("✅ [FaceDetectorSDK] Recording timer created: \(String(describing: recordingTimer))")
-        } else {
-            print("⚠️ [FaceDetectorSDK] Recording timer hidden by configuration")
-        }
+        // Always create recording timer for dynamic visibility
+        recordingTimer = JAAKRecordingTimer(configuration: configuration.timerStyles)
+        recordingTimer?.isHidden = configuration.hideTimer
+        print("✅ [FaceDetectorSDK] Recording timer created, hidden: \(configuration.hideTimer)")
         
         // Initialize instruction components (tutorial-style instructions)
         if configuration.enableInstructions {
@@ -866,9 +861,6 @@ extension JAAKFaceDetectorSDK {
     private func applyDynamicConfigurationChanges(from oldConfig: JAAKFaceDetectorConfiguration, to newConfig: JAAKFaceDetectorConfiguration) {
         
         // Update UI components that can change dynamically
-        if oldConfig.hideFaceTracker != newConfig.hideFaceTracker {
-            updateFaceTrackerVisibility(hidden: newConfig.hideFaceTracker)
-        }
         
         if oldConfig.hideTimer != newConfig.hideTimer {
             updateTimerVisibility(hidden: newConfig.hideTimer)
@@ -906,12 +898,6 @@ extension JAAKFaceDetectorSDK {
         }
     }
     
-    private func updateFaceTrackerVisibility(hidden: Bool) {
-        DispatchQueue.main.async { [weak self] in
-            self?.faceTrackingOverlay?.isHidden = hidden
-            print("👤 [FaceDetectorSDK] Face tracker visibility updated: \(hidden ? "hidden" : "visible")")
-        }
-    }
     
     private func updateTimerVisibility(hidden: Bool) {
         DispatchQueue.main.async { [weak self] in
