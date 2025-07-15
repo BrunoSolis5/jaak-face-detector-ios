@@ -931,10 +931,6 @@ extension JAAKFaceDetectorSDK {
             handleMicrophoneConfigurationChange(enabled: newConfig.enableMicrophone)
         }
         
-        if oldConfig.muteFaceDetectionMessages != newConfig.muteFaceDetectionMessages {
-            // This just affects internal message handling, no UI changes needed
-            print("📢 [FaceDetectorSDK] Face detection messages mute status: \(newConfig.muteFaceDetectionMessages)")
-        }
         
         // Update timer styles if they changed
         if !timerStylesMatch(oldConfig.timerStyles, newConfig.timerStyles) {
