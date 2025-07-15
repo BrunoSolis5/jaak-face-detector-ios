@@ -61,54 +61,100 @@ public class JAAKFaceDetectorSDK: NSObject {
         updateStatus(.loading)
         
         // Check permissions first
-        try checkPermissions()
+        do {
+            try checkPermissions()
+        } catch let error as JAAKFaceDetectorError where error.code == "PERMISSIONS_REQUIRED" {
+            // Request permissions asynchronously and retry
+            print("🔐 [FaceDetectorSDK] Permissions required, requesting asynchronously...")
+            requestPermissionsAndRetryStart()
+            return
+        }
         
         do {
-            // Setup camera only if not already set up
-            guard let cameraManager = cameraManager else {
-                throw JAAKFaceDetectorError(label: "Camera manager not initialized", code: "CAMERA_MANAGER_NIL")
-            }
-            
-            // Check if session is already configured
-            let captureSession = cameraManager.getCaptureSession()
-            if captureSession.inputs.isEmpty {
-                print("🔧 [FaceDetectorSDK] Camera session not configured, setting up...")
-                try cameraManager.setupCaptureSession(with: configuration)
-            } else {
-                print("✅ [FaceDetectorSDK] Camera session already configured, skipping setup")
-            }
-            
-            // Load models if not already loaded
-            if status != .loaded {
-                try loadModels()
-            } else {
-                print("✅ [FaceDetectorSDK] Models already loaded, skipping...")
-            }
-            
-            // Start camera
-            print("🎥 [FaceDetectorSDK] About to start camera session...")
-            cameraManager.startSession()
-            print("🎥 [FaceDetectorSDK] Camera session start command sent")
-            
-            // Start security monitoring
-            securityMonitor?.startMonitoring()
-            
-            // Show initial instructions
-            instructionController?.startInstructions()
-            
-            // Progressive auto recorder works automatically after recording completion
-            
-            updateStatus(.running)
+            try continueStartDetection()
         } catch {
-            let detectorError = JAAKFaceDetectorError(
-                label: "Failed to start detection",
-                code: "START_DETECTION_FAILED",
-                details: error
-            )
             updateStatus(.error)
-            delegate?.faceDetector(self, didEncounterError: detectorError)
-            throw detectorError
+            throw error
         }
+    }
+    
+    /// Request permissions asynchronously and retry start
+    private func requestPermissionsAndRetryStart() {
+        print("🔐 [FaceDetectorSDK] Requesting permissions asynchronously...")
+        
+        // Request permissions on background queue to avoid blocking UI
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            JAAKPermissionManager.requestRequiredPermissions(enableMicrophone: self.configuration.enableMicrophone) { [weak self] granted, error in
+                guard let self = self else { return }
+                
+                DispatchQueue.main.async {
+                    if granted {
+                        print("✅ [FaceDetectorSDK] Permissions granted, retrying start...")
+                        do {
+                            try self.continueStartDetection()
+                        } catch {
+                            print("❌ [FaceDetectorSDK] Failed to start after permissions granted: \(error)")
+                            self.updateStatus(.error)
+                            let detectorError = error as? JAAKFaceDetectorError ?? JAAKFaceDetectorError(
+                                label: "Failed to start after permissions granted",
+                                code: "START_AFTER_PERMISSIONS_FAILED",
+                                details: error
+                            )
+                            self.delegate?.faceDetector(self, didEncounterError: detectorError)
+                        }
+                    } else {
+                        print("❌ [FaceDetectorSDK] Permissions denied")
+                        self.updateStatus(.error)
+                        let permissionError = error ?? JAAKFaceDetectorError(
+                            label: "Required permissions not granted",
+                            code: "PERMISSIONS_DENIED"
+                        )
+                        self.delegate?.faceDetector(self, didEncounterError: permissionError)
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Continue with detection start after permissions are confirmed
+    private func continueStartDetection() throws {
+        // Setup camera only if not already set up
+        guard let cameraManager = cameraManager else {
+            throw JAAKFaceDetectorError(label: "Camera manager not initialized", code: "CAMERA_MANAGER_NIL")
+        }
+        
+        // Check if session is already configured
+        let captureSession = cameraManager.getCaptureSession()
+        if captureSession.inputs.isEmpty {
+            print("🔧 [FaceDetectorSDK] Camera session not configured, setting up...")
+            try cameraManager.setupCaptureSession(with: configuration)
+        } else {
+            print("✅ [FaceDetectorSDK] Camera session already configured, skipping setup")
+        }
+        
+        // Load models if not already loaded
+        if status != .loaded {
+            try loadModels()
+        } else {
+            print("✅ [FaceDetectorSDK] Models already loaded, skipping...")
+        }
+        
+        // Start camera
+        print("🎥 [FaceDetectorSDK] About to start camera session...")
+        cameraManager.startSession()
+        print("🎥 [FaceDetectorSDK] Camera session start command sent")
+        
+        // Start security monitoring
+        securityMonitor?.startMonitoring()
+        
+        // Show initial instructions
+        instructionController?.startInstructions()
+        
+        // Progressive auto recorder works automatically after recording completion
+        
+        updateStatus(.running)
     }
     
     /// Stop face detection
@@ -560,35 +606,26 @@ public class JAAKFaceDetectorSDK: NSObject {
         print("🔐 [FaceDetectorSDK] Camera authorized: \(JAAKPermissionManager.isCameraAuthorized())")
         print("🔐 [FaceDetectorSDK] Microphone authorized: \(JAAKPermissionManager.isMicrophoneAuthorized())")
         
-        // Request permissions using JAAKPermissionManager
-        // This will trigger permission prompts if needed
+        // Check if permissions are already granted
+        let cameraAuthorized = JAAKPermissionManager.isCameraAuthorized()
+        let microphoneAuthorized = !configuration.enableMicrophone || JAAKPermissionManager.isMicrophoneAuthorized()
         
-        let semaphore = DispatchSemaphore(value: 0)
-        var permissionError: JAAKFaceDetectorError?
-        
-        print("🔐 [FaceDetectorSDK] Requesting required permissions...")
-        JAAKPermissionManager.requestRequiredPermissions(enableMicrophone: configuration.enableMicrophone) { granted, error in
-            print("🔐 [FaceDetectorSDK] Permission request completed - granted: \(granted)")
-            if let error = error {
-                print("🔐 [FaceDetectorSDK] Permission error: \(error)")
-            }
-            
-            if !granted {
-                permissionError = error ?? JAAKFaceDetectorError(
-                    label: "Required permissions not granted",
-                    code: "PERMISSIONS_DENIED"
-                )
-            }
-            semaphore.signal()
+        if cameraAuthorized && microphoneAuthorized {
+            print("✅ [FaceDetectorSDK] All required permissions already granted")
+            return
         }
         
-        semaphore.wait()
+        // If permissions are missing, we'll request them asynchronously later
+        // For now, throw an error to indicate permissions are needed
+        let missingPermissions = [
+            !cameraAuthorized ? "camera" : nil,
+            (configuration.enableMicrophone && !microphoneAuthorized) ? "microphone" : nil
+        ].compactMap { $0 }
         
-        if let error = permissionError {
-            throw error
-        }
-        
-        print("✅ [FaceDetectorSDK] All required permissions granted")
+        throw JAAKFaceDetectorError(
+            label: "Missing permissions: \(missingPermissions.joined(separator: ", "))",
+            code: "PERMISSIONS_REQUIRED"
+        )
     }
     
     private func updateStatus(_ newStatus: JAAKFaceDetectorStatus) {
@@ -863,6 +900,24 @@ extension JAAKFaceDetectorSDK {
             if wasRunning {
                 do {
                     try startDetection()
+                    
+                    // After restart, reapply microphone configuration if needed
+                    // This handles both: microphone setting changes AND camera position changes with microphone enabled
+                    print("🔧 [FaceDetectorSDK] Checking microphone reapplication after restart...")
+                    print("🔧 [FaceDetectorSDK] - oldConfig.enableMicrophone: \(oldConfiguration.enableMicrophone)")
+                    print("🔧 [FaceDetectorSDK] - newConfig.enableMicrophone: \(newConfiguration.enableMicrophone)")
+                    print("🔧 [FaceDetectorSDK] - oldConfig.cameraPosition: \(oldConfiguration.cameraPosition)")
+                    print("🔧 [FaceDetectorSDK] - newConfig.cameraPosition: \(newConfiguration.cameraPosition)")
+                    
+                    if oldConfiguration.enableMicrophone != newConfiguration.enableMicrophone {
+                        print("🎤 [FaceDetectorSDK] Reapplying microphone configuration after restart (setting changed)")
+                        handleMicrophoneConfigurationChange(enabled: newConfiguration.enableMicrophone)
+                    } else if newConfiguration.enableMicrophone && oldConfiguration.cameraPosition != newConfiguration.cameraPosition {
+                        print("🎤 [FaceDetectorSDK] Reapplying microphone configuration after camera change")
+                        handleMicrophoneConfigurationChange(enabled: newConfiguration.enableMicrophone)
+                    } else {
+                        print("✅ [FaceDetectorSDK] No microphone reapplication needed after restart")
+                    }
                 } catch {
                     delegate?.faceDetector(self, didEncounterError: error as? JAAKFaceDetectorError ?? JAAKFaceDetectorError(label: "Failed to restart after configuration update", code: "CONFIG_UPDATE_RESTART_FAILED"))
                 }
