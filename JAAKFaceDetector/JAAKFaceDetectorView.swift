@@ -190,12 +190,6 @@ public class JAAKFaceDetectorUIView: UIView {
         faceDetector?.recordVideo(completion: completion)
     }
     
-    /// Take snapshot
-    @available(iOS 13.0, *)
-    public func takeSnapshot(completion: @escaping (Result<JAAKFileResult, JAAKFaceDetectorError>) -> Void) {
-        print("📸 [JAAKFaceDetectorUIView] Taking snapshot...")
-        faceDetector?.takeSnapshot(completion: completion)
-    }
     
     /// Toggle between front and back camera
     @available(iOS 13.0, *)
@@ -270,7 +264,7 @@ public protocol JAAKFaceDetectorViewDelegate: AnyObject {
     ///   - success: Whether camera toggle was successful
     func faceDetectorView(_ view: JAAKFaceDetectorView, didToggleCamera success: Bool)
     
-    /// Called when a file is captured (video or snapshot)
+    /// Called when a file is captured (video)
     /// - Parameters:
     ///   - view: The face detector view
     ///   - fileResult: The captured file result

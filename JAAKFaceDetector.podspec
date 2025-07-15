@@ -9,7 +9,7 @@ Pod::Spec.new do |spec|
                        - Face quality metrics and validation
                        - Security monitoring and device validation
                        - Customizable UI overlays and instructions
-                       - Video recording and snapshot capture
+                       - Video recording
                        DESC
 
   spec.homepage      = "https://github.com/BrunoSolis5/JAAKFaceDetectorIOS"

@@ -91,60 +91,6 @@ internal class JAAKVideoRecorder: NSObject {
         return max(remaining, 0.0)
     }
     
-    /// Take a snapshot from current camera feed
-    /// - Parameters:
-    ///   - sampleBuffer: current video frame
-    ///   - completion: completion handler with result
-    func takeSnapshot(from sampleBuffer: CMSampleBuffer, completion: @escaping (Result<JAAKFileResult, JAAKFaceDetectorError>) -> Void) {
-        
-        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
-            let error = JAAKFaceDetectorError(
-                label: "Failed to get pixel buffer from sample",
-                code: "PIXEL_BUFFER_FAILED"
-            )
-            completion(.failure(error))
-            return
-        }
-        
-        // Convert pixel buffer to UIImage
-        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-        let context = CIContext()
-        
-        guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
-            let error = JAAKFaceDetectorError(
-                label: "Failed to create CGImage from pixel buffer",
-                code: "CGIMAGE_CREATION_FAILED"
-            )
-            completion(.failure(error))
-            return
-        }
-        
-        let image = UIImage(cgImage: cgImage)
-        
-        // Convert to JPEG data
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-            let error = JAAKFaceDetectorError(
-                label: "Failed to convert image to JPEG data",
-                code: "IMAGE_CONVERSION_FAILED"
-            )
-            completion(.failure(error))
-            return
-        }
-        
-        // Create file result
-        let base64String = imageData.base64EncodedString()
-        let fileName = "snapshot_\(Int(Date().timeIntervalSince1970)).jpg"
-        
-        let fileResult = JAAKFileResult(
-            data: imageData,
-            base64: base64String,
-            mimeType: "image/jpeg",
-            fileName: fileName,
-            fileSize: imageData.count
-        )
-        
-        completion(.success(fileResult))
-    }
     
     // MARK: - Private Methods
     

@@ -8,7 +8,6 @@ public enum JAAKFaceDetectorStatus: String, CaseIterable {
     case recording = "recording"
     case error = "error"
     case running = "running"
-    case snapshotting = "snapshotting"
     case finished = "finished"
     case stopped = "stopped"
 }

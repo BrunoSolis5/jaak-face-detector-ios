@@ -40,7 +40,7 @@ public protocol JAAKFaceDetectorSDKDelegate: AnyObject {
     /// Called when an error occurs
     func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAKFaceDetectorError)
     
-    /// Called when a file is captured (video or snapshot)
+    /// Called when a file is captured (video)
     func faceDetector(_ detector: JAAKFaceDetectorSDK, didCaptureFile result: JAAKFileResult)
     
     /// Called when face detection provides feedback

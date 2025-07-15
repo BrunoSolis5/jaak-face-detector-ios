@@ -228,63 +228,6 @@ public class JAAKFaceDetectorSDK: NSObject {
         }
     }
     
-    /// Take a snapshot
-    /// - Parameter completion: Completion handler with result
-    public func takeSnapshot(completion: @escaping (Result<JAAKFileResult, JAAKFaceDetectorError>) -> Void) {
-        guard status == .running else {
-            let error = JAAKFaceDetectorError(
-                label: "Cannot take snapshot - detector not running",
-                code: "INVALID_STATE"
-            )
-            completion(.failure(error))
-            return
-        }
-        
-        updateStatus(.snapshotting)
-        
-        // Get current video frame from camera manager and convert to image
-        guard let cameraManager = cameraManager else {
-            let error = JAAKFaceDetectorError(
-                label: "Camera manager not available",
-                code: "CAMERA_MANAGER_NIL"
-            )
-            updateStatus(.running)
-            completion(.failure(error))
-            return
-        }
-        
-        // Request snapshot from camera manager
-        cameraManager.captureStillImage { [weak self] result in
-            DispatchQueue.main.async {
-                self?.updateStatus(.running)
-                
-                switch result {
-                case .success(let imageData):
-                    // Create timestamp-based filename
-                    let formatter = DateFormatter()
-                    formatter.dateFormat = "yyyyMMdd_HHmmss"
-                    let fileName = "snapshot_\(formatter.string(from: Date())).jpg"
-                    
-                    // Create base64 string
-                    let base64String = imageData.base64EncodedString()
-                    
-                    let fileResult = JAAKFileResult(
-                        data: imageData,
-                        base64: base64String,
-                        mimeType: "image/jpeg",
-                        fileName: fileName,
-                        fileSize: imageData.count
-                    )
-                    
-                    print("📸 [FaceDetectorSDK] Snapshot captured: \(fileName), size: \(imageData.count) bytes")
-                    completion(.success(fileResult))
-                    
-                case .failure(let error):
-                    completion(.failure(error))
-                }
-            }
-        }
-    }
     
     // MARK: - Public Methods - Stream Management
     
@@ -531,7 +474,7 @@ public class JAAKFaceDetectorSDK: NSObject {
         let view = UIView()
         view.backgroundColor = .clear
         
-        // TODO: Add control buttons (record, snapshot, toggle camera, etc.)
+        // TODO: Add control buttons (record, toggle camera, etc.)
         // This is a placeholder - actual implementation will be added in next phases
         
         return view
