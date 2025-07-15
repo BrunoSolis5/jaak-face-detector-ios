@@ -189,7 +189,7 @@ internal class JAAKFaceTrackingOverlay: UIView {
     
     /// Apply orientation transform to face detection coordinates (like native camera app)
     private func applyOrientationTransform(to rect: CGRect) -> CGRect {
-        let _ = UIDevice.current.orientation
+        let  _ = UIDevice.current.orientation
         
         // Important: Don't transform coordinates here since MediaPipe already provides
         // coordinates relative to the current video orientation. Just return as-is.
