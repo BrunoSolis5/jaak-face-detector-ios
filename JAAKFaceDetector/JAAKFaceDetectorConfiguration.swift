@@ -43,7 +43,6 @@ public struct JAAKFaceDetectorConfiguration {
     
     // Auto Recording Settings
     public var autoRecorder: Bool = false
-    public var progressiveAutoRecorder: Bool = false
     
     // Timer Settings
     public var timerStyles: JAAKTimerStyles = JAAKTimerStyles()

@@ -402,13 +402,13 @@ internal class JAAKFaceDetectionEngine: NSObject {
         videoNativeHeight = 0
     }
     
-    /// Reset detection state for progressive recording
+    /// Reset detection state for auto recording
     func resetDetectionState() {
         consecutiveNoFaceFrames = 0
         lastFaceDetectionTime = Date()
         currentSampleBuffer = nil
         
-        print("🔄 [FaceDetectionEngine] Detection state reset for progressive recording")
+        print("🔄 [FaceDetectionEngine] Detection state reset for auto recording")
     }
     
     /// Transform bounding box coordinates from MediaPipe native space to display space

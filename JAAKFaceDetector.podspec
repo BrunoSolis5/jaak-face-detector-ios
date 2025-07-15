@@ -5,7 +5,7 @@ Pod::Spec.new do |spec|
   spec.description   = <<-DESC
                        JAAKFaceDetector is an advanced face detection library that provides:
                        - Real-time face detection using MediaPipe BlazeFace
-                       - Progressive auto-recording with quality analysis
+                       - Auto-recording with quality analysis
                        - Face quality metrics and validation
                        - Security monitoring and device validation
                        - Customizable UI overlays and instructions

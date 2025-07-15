@@ -152,7 +152,7 @@ public class JAAKFaceDetectorSDK: NSObject {
         // Show initial instructions
         instructionController?.startInstructions()
         
-        // Progressive auto recorder works automatically after recording completion
+        // Auto recorder works automatically after recording completion
         
         updateStatus(.running)
     }
@@ -735,7 +735,7 @@ extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
     }
     
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didDetectFaces detections: [Detection], sampleBuffer: CMSampleBuffer) {
-        // Face detection results received - progressive recording is handled automatically
+        // Face detection results received - auto recording is handled automatically
         // through the normal recording flow when faces are detected
     }
     
@@ -762,32 +762,13 @@ extension JAAKFaceDetectorSDK: JAAKVideoRecorderDelegate {
     func videoRecorder(_ recorder: JAAKVideoRecorder, didFinishRecording fileResult: JAAKFileResult) {
         updateStatus(.finished)
         
-        // Stop timer with progressive flag if needed
-        let isProgressive = configuration.progressiveAutoRecorder
-        recordingTimer?.stopTimer(isProgressive: isProgressive)
+        // Stop timer
+        recordingTimer?.stopTimer()
         
         // Always notify delegate about the completed recording
         delegate?.faceDetector(self, didCaptureFile: fileResult)
-        
-        // If progressive auto recorder is enabled, prepare for next recording
-        if configuration.progressiveAutoRecorder {
-            resetForNextRecording()
-        }
     }
     
-    /// Reset all states to prepare for next recording in progressive mode
-    private func resetForNextRecording() {
-        print("🔄 [FaceDetectorSDK] Progressive auto recorder enabled - preparing for next recording...")
-        print("📊 [FaceDetectorSDK] Current status: \(status), autoRecorder: \(configuration.autoRecorder)")
-        
-        // Clear any previous face detection state that might block new recording
-        faceDetectionEngine?.resetDetectionState()
-        
-        // Ensure status is back to running for auto-recording detection (with delay to allow UI to update)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            self.updateStatus(.running)
-        }
-    }
     
     func videoRecorder(_ recorder: JAAKVideoRecorder, didFailWithError error: JAAKFaceDetectorError) {
         updateStatus(.error)
@@ -967,8 +948,7 @@ extension JAAKFaceDetectorSDK {
         
         // Update recording settings
         if oldConfig.videoDuration != newConfig.videoDuration ||
-           oldConfig.autoRecorder != newConfig.autoRecorder ||
-           oldConfig.progressiveAutoRecorder != newConfig.progressiveAutoRecorder {
+           oldConfig.autoRecorder != newConfig.autoRecorder {
             videoRecorder?.updateConfiguration(newConfig)
         }
         

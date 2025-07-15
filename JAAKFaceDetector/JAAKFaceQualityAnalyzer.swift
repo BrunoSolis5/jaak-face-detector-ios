@@ -2,7 +2,7 @@ import AVFoundation
 import UIKit
 import MediaPipeTasksVision
 
-/// Analyzes face quality for progressive recording (simplified version)
+/// Analyzes face quality for auto recording (simplified version)
 internal class JAAKFaceQualityAnalyzer {
     
     // MARK: - Types
