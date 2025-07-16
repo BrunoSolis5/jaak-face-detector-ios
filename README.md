@@ -56,50 +56,302 @@ Agrega la siguiente clave a tu `Info.plist`:
 
 ## 2. **Inicio rápido**
 
-```swift
-import JAAKFaceDetector
+### Integración completa con controles y reproductor
 
-class ViewController: UIViewController {
-    private var detector: JAAKFaceDetectorSDK?
+```swift
+import SwiftUI
+import JAAKFaceDetector
+import AVKit
+
+struct ContentView: View {
+    @StateObject private var faceDetectorManager = FaceDetectorManager()
     
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        // Configurar detector
-        let config = JAAKFaceDetectorConfiguration()
-        config.videoDuration = 4.0
-        config.autoRecorder = true
-        
-        // Inicializar
-        detector = JAAKFaceDetectorSDK(configuration: config)
-        detector?.delegate = self
-        
-        // Crear vista de preview
-        let previewView = detector?.createPreviewView()
-        previewView?.frame = view.bounds
-        view.addSubview(previewView!)
-        
-        // Iniciar detección
-        try? detector?.startDetection()
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // Vista del detector
+                FaceDetectorViewWrapper(manager: faceDetectorManager)
+                    .frame(height: UIScreen.main.bounds.height * 0.5)
+                    .cornerRadius(16)
+                    .padding(.horizontal)
+                
+                // Estado actual
+                Text(faceDetectorManager.statusMessage)
+                    .font(.headline)
+                    .padding()
+                
+                // Controles principales
+                HStack(spacing: 15) {
+                    // Iniciar/Detener
+                    Button(action: {
+                        faceDetectorManager.toggleDetection()
+                    }) {
+                        Text(faceDetectorManager.isDetectionActive ? "Detener" : "Iniciar")
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(faceDetectorManager.isDetectionActive ? Color.red : Color.green)
+                            .cornerRadius(8)
+                    }
+                    
+                    // Cambiar cámara
+                    Button(action: {
+                        faceDetectorManager.toggleCamera()
+                    }) {
+                        Text("Cambiar Cámara")
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(8)
+                    }
+                    
+                    // Reiniciar
+                    Button(action: {
+                        faceDetectorManager.restartDetector()
+                    }) {
+                        Text("Reiniciar")
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.indigo)
+                            .cornerRadius(8)
+                    }
+                }
+                .padding(.horizontal)
+                
+                // Videos grabados
+                if !faceDetectorManager.recordedVideos.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Videos Grabados")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
+                        ForEach(faceDetectorManager.recordedVideos.reversed()) { video in
+                            VideoRowView(video: video)
+                                .padding(.horizontal)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
-// Implementar delegate
-extension ViewController: JAAKFaceDetectorSDKDelegate {
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didCaptureFile result: JAAKFileResult) {
-        print("Video capturado: \(result.fileName ?? "unknown")")
+// MARK: - Face Detector Manager
+class FaceDetectorManager: ObservableObject {
+    @Published var statusMessage = "Listo para iniciar"
+    @Published var isDetectionActive = false
+    @Published var recordedVideos: [RecordedVideo] = []
+    
+    private var faceDetectorUIView: JAAKFaceDetectorUIView?
+    private var configuration: JAAKFaceDetectorConfiguration
+    
+    init() {
+        // Configuración con los parámetros solicitados
+        configuration = JAAKFaceDetectorConfiguration()
+        configuration.videoDuration = 4.0          // 4 segundos
+        configuration.autoRecorder = true          // Auto grabación
+        configuration.enableInstructions = true    // Instrucciones habilitadas
+        configuration.enableMicrophone = false     // Sin audio
+        configuration.cameraPosition = .front      // Cámara frontal
     }
     
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAKFaceDetectorError) {
-        print("Error: \(error.localizedDescription)")
+    func setFaceDetectorUIView(_ view: JAAKFaceDetectorUIView) {
+        self.faceDetectorUIView = view
+        
+        // Auto-iniciar si está configurado
+        if configuration.autoRecorder {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.startDetection()
+            }
+        }
     }
     
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didUpdateStatus status: JAAKFaceDetectorStatus) {
-        print("Status: \(status.rawValue)")
+    func toggleDetection() {
+        if isDetectionActive {
+            stopDetection()
+        } else {
+            startDetection()
+        }
     }
     
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didDetectFace message: JAAKFaceDetectionMessage) {
-        print("Face detected: \(message.faceExists)")
+    func startDetection() {
+        faceDetectorUIView?.startDetection { [weak self] success in
+            DispatchQueue.main.async {
+                self?.isDetectionActive = success
+                self?.statusMessage = success ? "Detección activa" : "Error al iniciar"
+            }
+        }
+    }
+    
+    func stopDetection() {
+        faceDetectorUIView?.stopDetection { [weak self] success in
+            DispatchQueue.main.async {
+                self?.isDetectionActive = !success
+                self?.statusMessage = success ? "Detección detenida" : "Error al detener"
+            }
+        }
+    }
+    
+    func toggleCamera() {
+        faceDetectorUIView?.toggleCamera { [weak self] success in
+            DispatchQueue.main.async {
+                self?.statusMessage = success ? "Cámara cambiada" : "Error al cambiar cámara"
+            }
+        }
+    }
+    
+    func restartDetector() {
+        stopDetection()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.startDetection()
+        }
+    }
+}
+
+// MARK: - Face Detector Delegates
+extension FaceDetectorManager: JAAKFaceDetectorViewDelegate {
+    func faceDetectorView(_ view: JAAKFaceDetectorView, didCaptureFile fileResult: JAAKFileResult) {
+        DispatchQueue.main.async {
+            let video = RecordedVideo(
+                id: UUID(),
+                fileName: fileResult.fileName ?? "video_\(Date().timeIntervalSince1970).mp4",
+                data: fileResult.data,
+                size: fileResult.fileSize,
+                date: Date()
+            )
+            self.recordedVideos.append(video)
+            self.statusMessage = "¡Video capturado! (\(fileResult.fileSize) bytes)"
+        }
+    }
+    
+    func faceDetectorView(_ view: JAAKFaceDetectorView, didEncounterError error: Error) {
+        DispatchQueue.main.async {
+            self.statusMessage = "Error: \(error.localizedDescription)"
+        }
+    }
+    
+    func faceDetectorView(status: JAAKFaceDetectorStatus) {
+        DispatchQueue.main.async {
+            switch status {
+            case .loading:
+                self.statusMessage = "Cargando modelos..."
+            case .loaded:
+                self.statusMessage = "Listo para detección"
+            case .running:
+                self.statusMessage = "Detectando rostro..."
+            case .recording:
+                self.statusMessage = "¡Grabando video!"
+            case .finished:
+                self.statusMessage = "Grabación completada"
+            case .error:
+                self.statusMessage = "Error en detección"
+            case .stopped:
+                self.statusMessage = "Detección detenida"
+            case .notLoaded:
+                self.statusMessage = "Modelos no cargados"
+            }
+        }
+    }
+    
+    func faceDetectorView(didDetectFace message: JAAKFaceDetectionMessage) {
+        // Opcional: mostrar mensajes de posicionamiento
+        if message.faceExists && !message.correctPosition {
+            DispatchQueue.main.async {
+                self.statusMessage = "Ajuste la posición del rostro"
+            }
+        }
+    }
+}
+
+// MARK: - Wrapper para integración UIKit/SwiftUI
+struct FaceDetectorViewWrapper: UIViewRepresentable {
+    let manager: FaceDetectorManager
+    
+    func makeUIView(context: Context) -> JAAKFaceDetectorUIView {
+        let view = JAAKFaceDetectorUIView(configuration: manager.configuration)
+        view.delegate = manager
+        manager.setFaceDetectorUIView(view)
+        return view
+    }
+    
+    func updateUIView(_ uiView: JAAKFaceDetectorUIView, context: Context) {}
+}
+
+// MARK: - Modelo de Video
+struct RecordedVideo: Identifiable {
+    let id: UUID
+    let fileName: String
+    let data: Data
+    let size: Int
+    let date: Date
+}
+
+// MARK: - Vista de Video
+struct VideoRowView: View {
+    let video: RecordedVideo
+    @State private var isExpanded = false
+    @State private var videoURL: URL?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading) {
+                    Text(video.fileName)
+                        .font(.headline)
+                    Text("\(ByteCountFormatter.string(fromByteCount: Int64(video.size), countStyle: .file))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(video.date, style: .time)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Button(action: {
+                    isExpanded.toggle()
+                    if isExpanded {
+                        createTemporaryVideoFile()
+                    }
+                }) {
+                    Text(isExpanded ? "Cerrar" : "Reproducir")
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(isExpanded ? Color.red : Color.blue)
+                        .cornerRadius(6)
+                }
+            }
+            
+            if isExpanded, let videoURL = videoURL {
+                VideoPlayer(player: AVPlayer(url: videoURL))
+                    .frame(height: 200)
+                    .cornerRadius(8)
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
+        .onDisappear {
+            cleanupTemporaryFile()
+        }
+    }
+    
+    private func createTemporaryVideoFile() {
+        let tempDir = FileManager.default.temporaryDirectory
+        let tempURL = tempDir.appendingPathComponent(video.fileName)
+        
+        do {
+            try video.data.write(to: tempURL)
+            videoURL = tempURL
+        } catch {
+            print("Error creating temporary video file: \(error)")
+        }
+    }
+    
+    private func cleanupTemporaryFile() {
+        if let url = videoURL {
+            try? FileManager.default.removeItem(at: url)
+        }
     }
 }
 ```
@@ -561,40 +813,21 @@ public enum JAAKFaceDetectorErrorType: String {
 | **Descripción:** | El detector no puede acceder a la cámara y permanece en estado `loading` |
 | **Causas posibles:** | Permisos de cámara denegados, dispositivo ocupado, configuración incorrecta |
 | **Solución:** | Verificar permisos, revisar Info.plist, asegurar que ninguna otra app use la cámara |
-| **Código de ejemplo:** | ```swift
-// Verificar permisos
-let status = AVCaptureDevice.authorizationStatus(for: .video)
-if status == .denied {
-    // Dirigir a configuración
-    if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
-        UIApplication.shared.open(settingsUrl)
-    }
-}
-``` |
+| **Código de ejemplo:** | `let status = AVCaptureDevice.authorizationStatus(for: .video)` <br> `if status == .denied { UIApplication.shared.open(settingsUrl) }` |
 
 | Problema: | El detector no detecta rostros |
 |-----------|------------------------------|
 | **Descripción:** | La detección facial no funciona correctamente |
 | **Causas posibles:** | Iluminación insuficiente, rostro parcialmente oculto, configuración incorrecta |
 | **Solución:** | Mejorar iluminación, asegurar rostro completamente visible, verificar configuración |
-| **Código de ejemplo:** | ```swift
-// Verificar configuración
-if config.disableFaceDetection {
-    config.disableFaceDetection = false
-    detector.updateConfiguration(config)
-}
-``` |
+| **Código de ejemplo:** | `if config.disableFaceDetection { config.disableFaceDetection = false; detector.updateConfiguration(config) }` |
 
 | Problema: | La grabación termina inmediatamente |
 |-----------|-------------------------------------|
 | **Descripción:** | El video se graba pero termina al instante |
 | **Causas posibles:** | Configuración de duración incorrecta, problema de sincronización |
 | **Solución:** | Verificar `videoDuration`, reiniciar detector |
-| **Código de ejemplo:** | ```swift
-// Configurar duración mínima
-config.videoDuration = max(config.videoDuration, 2.0)
-detector.updateConfiguration(config)
-``` |
+| **Código de ejemplo:** | `config.videoDuration = max(config.videoDuration, 2.0); detector.updateConfiguration(config)` |
 
 #### b) **Códigos de error específicos**
 
@@ -641,45 +874,6 @@ detector.updateConfiguration(config)
 - **Distancia:** Rostro debe estar a 30-60cm de la cámara
 - **Orientación:** Funciona mejor con rostro centrado y vertical
 - **Estabilidad:** Evitar movimientos bruscos durante la grabación
-
----
-
-## 3. Anexo(s)
-
-### **Anexo A.** Glosario de términos
-
-| Término | Definición |
-|---------|------------|
-| **BlazeFace** | Modelo de detección facial de Google MediaPipe optimizado para móviles |
-| **MediaPipe** | Framework de ML de Google para procesamiento multimedia en tiempo real |
-| **AVCaptureSession** | Clase de iOS para coordinar entrada y salida de datos multimedia |
-| **Auto-recorder** | Funcionalidad que inicia grabación automáticamente al detectar rostro |
-| **Face tracking** | Seguimiento facial en tiempo real con overlay visual |
-| **Delegate pattern** | Patrón de diseño usado para comunicar eventos del SDK |
-
-### **Anexo B.** Enlaces de referencia
-
-- [Apple AVFoundation Documentation](https://developer.apple.com/documentation/avfoundation)
-- [MediaPipe Face Detection](https://google.github.io/mediapipe/solutions/face_detection.html)
-- [CocoaPods Integration Guide](https://guides.cocoapods.org/using/using-cocoapods.html)
-- [iOS Camera Permissions](https://developer.apple.com/documentation/avfoundation/cameras_and_media_capture/requesting_authorization_for_media_capture_on_ios)
-
----
-
-## 4. **Validez y gestión de documentos**
-
-*El propietario de este documento es el equipo de desarrollo de SDK iOS de JAAK, quien debe verificar y actualizar la documentación cuando sea necesario tras actualizaciones del SDK.*
-
----
-
-## 5. **Versionado**
-
-| **Responsable del documento:** | Equipo de desarrollo SDK iOS |
-|-------------------------------|------------------------------|
-| **Aprobado por:** | Arquitecto de Software Senior |
-| **Fecha de aprobación:** | 15/07/2025 |
-| **Clasificación de esta información:** | Documentación técnica pública |
-| **Código:** | SDK-iOS-FACE-001 v.1.0 |
 
 ---
 
