@@ -96,3 +96,6 @@ iOSInjectionProject/
 
 # macOS
 .DS_Store
+
+# Release artifacts
+*.zip

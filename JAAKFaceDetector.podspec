@@ -19,7 +19,7 @@ Pod::Spec.new do |spec|
   spec.platform      = :ios, "12.0"
   spec.swift_version = "5.0"
   
-  spec.source        = { :git => "https://github.com/BrunoSolis5/jaak-face-detector-ios.git", :tag => "#{spec.version}" }
+  spec.source        = { :http => "https://github.com/BrunoSolis5/jaak-face-detector-ios/releases/download/v#{spec.version}/JAAKFaceDetector-#{spec.version}.zip" }
   
   spec.source_files  = "JAAKFaceDetector/**/*.swift"
   spec.exclude_files = "JAAKFaceDetector/Info.plist"
