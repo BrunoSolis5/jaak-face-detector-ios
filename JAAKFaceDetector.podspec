@@ -12,14 +12,14 @@ Pod::Spec.new do |spec|
                        - Video recording
                        DESC
 
-  spec.homepage      = "https://github.com/BrunoSolis5/JAAKFaceDetectorIOS"
+  spec.homepage      = "https://github.com/BrunoSolis5/jaak-face-detector-ios"
   spec.license       = { :type => "MIT", :file => "LICENSE" }
-  spec.author        = { "Diego Bruno" => "your-email@example.com" }
+  spec.author        = { "Diego Bruno" => "diego.bruno@jaak.ai" }
   
   spec.platform      = :ios, "12.0"
   spec.swift_version = "5.0"
   
-  spec.source        = { :git => "https://github.com/BrunoSolis5/JAAKFaceDetectorIOS.git", :tag => "#{spec.version}" }
+  spec.source        = { :git => "https://github.com/BrunoSolis5/jaak-face-detector-ios.git", :tag => "#{spec.version}" }
   
   spec.source_files  = "JAAKFaceDetector/**/*.swift"
   spec.exclude_files = "JAAKFaceDetector/Info.plist"

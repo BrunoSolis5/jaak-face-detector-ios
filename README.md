@@ -52,14 +52,14 @@ Este documento abarca la instalación, configuración, implementación y uso del
 | Swift | 5.0+ | Sí | Lenguaje de programación base |
 | Xcode | 12.0+ | Sí | Entorno de desarrollo |
 | MediaPipe Tasks Vision | ~0.10.3 | Sí | Motor de detección facial AI |
-| AVFoundation | Sistema | Sí | Para captura de cámara y audio |
+| AVFoundation | Sistema | Sí | Para captura de cámara |
 | Camera | Física | Sí | Dispositivo debe tener cámara |
 
 #### b) **Credenciales y configuración de accesos**
 
 **Requisitos de acceso:**
 
-- **Permisos iOS:** Acceso a cámara (obligatorio), micrófono (opcional)
+- **Permisos iOS:** Acceso a cámara (obligatorio)
 - **Configuración Info.plist:** Descripción de uso de permisos
 - **Ambiente:** Desarrollo local, no requiere conexión a servidores JAAK
 - **Dependencias:** CocoaPods para gestión de dependencias
@@ -84,8 +84,6 @@ pod install
 <!-- Agregar a Info.plist -->
 <key>NSCameraUsageDescription</key>
 <string>Esta aplicación necesita acceso a la cámara para detectar rostros</string>
-<key>NSMicrophoneUsageDescription</key>
-<string>Esta aplicación necesita acceso al micrófono para grabar audio</string>
 ```
 
 #### Paso 2. Configuración Avanzada
@@ -96,7 +94,6 @@ import JAAKFaceDetector
 // Configuración avanzada personalizada
 var config = JAAKFaceDetectorConfiguration()
 config.videoDuration = 5.0
-config.enableMicrophone = true
 config.autoRecorder = true
 config.cameraPosition = .front
 config.videoQuality = .high
@@ -130,7 +127,6 @@ class ViewController: UIViewController {
         // 1. Configuración básica
         let config = JAAKFaceDetectorConfiguration()
         config.videoDuration = 4.0
-        config.enableMicrophone = false
         
         // 2. Inicializar detector
         detector = JAAKFaceDetectorSDK(configuration: config)
@@ -235,7 +231,6 @@ class AdvancedFaceDetectorManager: NSObject {
         // Configuración avanzada
         var config = JAAKFaceDetectorConfiguration()
         config.videoDuration = 10.0
-        config.enableMicrophone = true
         config.autoRecorder = true
         config.cameraPosition = .front
         config.enableInstructions = true
@@ -377,7 +372,6 @@ extension AdvancedFaceDetectorManager: JAAKFaceDetectorSDKDelegate {
 | Parámetro | Tipo | Requerido | Descripción | Ejemplo |
 |-----------|------|-----------|-------------|---------|
 | `videoDuration` | `TimeInterval` | No | Duración de la grabación en segundos | `4.0` |
-| `enableMicrophone` | `Bool` | No | Habilitar grabación de audio | `true` |
 | `autoRecorder` | `Bool` | No | Activar grabación automática al detectar rostro | `false` |
 | `cameraPosition` | `AVCaptureDevice.Position` | No | Posición de la cámara (front/back) | `.front` |
 | `videoQuality` | `AVCaptureSession.Preset` | No | Calidad de video | `.high` |
@@ -449,7 +443,7 @@ public enum JAAKFaceDetectorErrorType: String {
 
 #### b) **Utilidades**
 
-- **JAAKPermissionManager:** Gestión de permisos de cámara y micrófono
+- **JAAKPermissionManager:** Gestión de permisos de cámara
 - **JAAKCameraManager:** Gestión de sesión de cámara y captura
 - **JAAKVideoRecorder:** Grabación y procesamiento de video
 - **JAAKFaceDetectionEngine:** Motor de detección facial con MediaPipe
@@ -538,7 +532,7 @@ detector.updateConfiguration(config)
 
 #### a) **Seguridad**
 
-- **Permisos:** Solo solicitar permisos necesarios (cámara obligatorio, micrófono opcional)
+- **Permisos:** Solo solicitar permisos necesarios (cámara obligatorio)
 - **Datos:** Los videos se procesan localmente, no se envían automáticamente a servidores
 - **Privacidad:** Informar claramente al usuario sobre el uso de la cámara
 - **Almacenamiento:** Implementar limpieza automática de archivos temporales
