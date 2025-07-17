@@ -6,28 +6,42 @@
 
 AI-powered face detection and recording library for iOS using MediaPipe BlazeFace
 
-## **Tabla de contenido**
+## Tabla de contenido
 
-1. [Instalación](#1-instalación)
-2. [Inicio rápido](#2-inicio-rápido)
-3. [Configuración](#3-configuración)
-4. [Documentación técnica](#4-documentación-técnica)
-   - 4.1 [Prerrequisitos técnicos](#41-prerrequisitos-técnicos)
-   - 4.2 [Configuración del entorno](#42-configuración-del-entorno)
-   - 4.3 [Guía de implementación](#43-guía-de-implementación)
-     - 4.3.1 [Implementación básica](#431-implementación-básica)
-     - 4.3.2 [Implementación avanzada](#432-implementación-avanzada)
-   - 4.4 [Referencias/Métodos](#44-referenciasmétodos)
-   - 4.5 [Componentes adicionales](#45-componentes-adicionales)
-   - 4.6 [Pruebas y validación](#46-pruebas-y-validación)
-   - 4.7 [Solución de problemas](#47-solución-de-problemas)
-   - 4.8 [Consideraciones importantes](#48-consideraciones-importantes)
-5. [Anexos](#5-anexos)
-6. [Licencia](#6-licencia)
+- [Características](#características)
+- [Requisitos](#requisitos)
+- [Instalación](#instalación)
+- [Inicio rápido](#inicio-rápido)
+- [Uso](#uso)
+  - [Implementación básica](#implementación-básica)
+  - [Integración con SwiftUI](#integración-con-swiftui)
+  - [Uso avanzado](#uso-avanzado)
+- [Configuración](#configuración)
+- [Referencia de API](#referencia-de-api)
+- [Manejo de errores](#manejo-de-errores)
+- [Solución de problemas](#solución-de-problemas)
+- [Licencia](#licencia)
+- [Soporte](#soporte)
 
----
+## Características
 
-## 1. **Instalación**
+- Detección facial en tiempo real usando MediaPipe BlazeFace
+- Grabación automática de video cuando se detecta rostro
+- Soporte para cámaras frontal y trasera
+- Parámetros de detección altamente configurables
+- Componentes UI personalizables y estilos
+- Guía y validación de posicionamiento facial
+- Compatibilidad con SwiftUI y UIKit
+- Enfoque en privacidad (procesamiento local únicamente)
+
+## Requisitos
+
+- iOS 12.0+
+- Xcode 12.0+
+- Swift 5.0+
+- Permisos de acceso a la cámara
+
+## Instalación
 
 ### CocoaPods
 
@@ -45,18 +59,28 @@ pod install
 
 ### Configuración de permisos
 
-Agrega la siguiente clave a tu `Info.plist`:
+#### Método 1: Mediante Xcode (Recomendado para versiones modernas)
+
+1. Selecciona tu proyecto en el navegador
+2. Ve a la pestaña **"Info"** de tu target
+3. Haz clic en el botón **"+"** para agregar una nueva clave
+4. Busca y selecciona: **"Privacy - Camera Usage Description"**
+5. Agrega el valor: **"Esta aplicación necesita acceso a la cámara para detectar rostros"**
+
+#### Método 2: Editando Info.plist directamente
+
+Para versiones anteriores de Xcode o si prefieres editar el archivo directamente:
 
 ```xml
 <key>NSCameraUsageDescription</key>
 <string>Esta aplicación necesita acceso a la cámara para detectar rostros</string>
 ```
 
----
+**Nota:** En versiones modernas de Xcode, el Info.plist tiene un formato diferente y es más recomendable usar la interfaz gráfica para evitar errores de sintaxis.
 
-## 2. **Inicio rápido**
+## Inicio rápido
 
-### Integración completa con controles y reproductor
+### Ejemplo completo con SwiftUI
 
 ```swift
 import SwiftUI
@@ -356,9 +380,130 @@ struct VideoRowView: View {
 }
 ```
 
----
+## Uso
 
-## 3. **Configuración**
+### Implementación básica
+
+```swift
+import UIKit
+import JAAKFaceDetector
+
+class ViewController: UIViewController {
+    private var detector: JAAKFaceDetectorSDK?
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Configuración
+        let config = JAAKFaceDetectorConfiguration()
+        config.videoDuration = 4.0
+        config.autoRecorder = true
+        
+        // Inicializar detector
+        detector = JAAKFaceDetectorSDK(configuration: config)
+        detector?.delegate = self
+        
+        // Crear vista
+        let previewView = detector?.createPreviewView()
+        previewView?.frame = view.bounds
+        view.addSubview(previewView!)
+        
+        // Iniciar detección
+        try? detector?.startDetection()
+    }
+}
+
+extension ViewController: JAAKFaceDetectorSDKDelegate {
+    func faceDetector(_ detector: JAAKFaceDetectorSDK, didCaptureFile result: JAAKFileResult) {
+        print("Video capturado: \(result.fileSize) bytes")
+    }
+    
+    func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAKFaceDetectorError) {
+        print("Error: \(error.localizedDescription)")
+    }
+}
+```
+
+### Integración con SwiftUI
+
+```swift
+import SwiftUI
+import JAAKFaceDetector
+
+struct ContentView: View {
+    @StateObject private var faceDetectorManager = FaceDetectorManager()
+    
+    var body: some View {
+        VStack {
+            // Vista del detector
+            FaceDetectorViewWrapper(manager: faceDetectorManager)
+                .frame(height: 400)
+                .cornerRadius(16)
+            
+            // Estado actual
+            Text(faceDetectorManager.statusMessage)
+                .font(.headline)
+                .padding()
+            
+            // Controles
+            HStack {
+                Button(action: {
+                    faceDetectorManager.toggleDetection()
+                }) {
+                    Text(faceDetectorManager.isDetectionActive ? "Detener" : "Iniciar")
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(faceDetectorManager.isDetectionActive ? Color.red : Color.green)
+                        .cornerRadius(8)
+                }
+                
+                Button(action: {
+                    faceDetectorManager.toggleCamera()
+                }) {
+                    Text("Cambiar Cámara")
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Color.blue)
+                        .cornerRadius(8)
+                }
+            }
+        }
+    }
+}
+
+// Wrapper para integración UIKit/SwiftUI
+struct FaceDetectorViewWrapper: UIViewRepresentable {
+    let manager: FaceDetectorManager
+    
+    func makeUIView(context: Context) -> JAAKFaceDetectorUIView {
+        let view = JAAKFaceDetectorUIView(configuration: manager.configuration)
+        view.delegate = manager
+        manager.setFaceDetectorUIView(view)
+        return view
+    }
+    
+    func updateUIView(_ uiView: JAAKFaceDetectorUIView, context: Context) {}
+}
+```
+
+### Uso avanzado
+
+```swift
+// Configuración personalizada
+var config = JAAKFaceDetectorConfiguration()
+config.videoDuration = 10.0
+config.autoRecorder = true
+config.cameraPosition = .front
+config.enableInstructions = true
+
+// Estilos personalizados
+config.timerStyles.textColor = .white
+config.timerStyles.circleColor = .blue
+config.faceTrackerStyles.validColor = .green
+config.faceTrackerStyles.invalidColor = .red
+```
+
+## Configuración
 
 ### JAAKFaceDetectorConfiguration
 
@@ -367,7 +512,6 @@ struct VideoRowView: View {
 | `videoDuration` | `TimeInterval` | Duración de grabación en segundos | `4.0` |
 | `autoRecorder` | `Bool` | Grabación automática al detectar rostro | `false` |
 | `cameraPosition` | `AVCaptureDevice.Position` | Posición de cámara (front/back) | `.front` |
-| `videoQuality` | `AVCaptureSession.Preset` | Calidad de video | `.high` |
 | `enableInstructions` | `Bool` | Mostrar instrucciones al usuario | `true` |
 | `instructionDelay` | `TimeInterval` | Tiempo antes de mostrar instrucciones | `5.0` |
 
@@ -381,366 +525,52 @@ config.faceTrackerStyles.validColor = .green
 config.faceTrackerStyles.invalidColor = .red
 ```
 
----
+## Referencia de API
 
-## 4. **Documentación técnica**
+### JAAKFaceDetectorSDK
 
-### 4.1 Prerrequisitos técnicos
+Clase principal del SDK que coordina la detección facial y grabación de video.
 
-#### a) **Requisitos técnicos**
-
-| Requisito | Versión/Especificación | Obligatorio | Notas |
-|-----------|------------------------|-------------|-------|
-| iOS | 12.0+ | Sí | Versión mínima soportada |
-| Swift | 5.0+ | Sí | Lenguaje de programación base |
-| Xcode | 12.0+ | Sí | Entorno de desarrollo |
-| MediaPipe Tasks Vision | ~0.10.3 | Sí | Motor de detección facial AI |
-| AVFoundation | Sistema | Sí | Para captura de cámara |
-| Camera | Física | Sí | Dispositivo debe tener cámara |
-
-#### b) **Credenciales y configuración de accesos**
-
-**Requisitos de acceso:**
-
-- **Permisos iOS:** Acceso a cámara (obligatorio)
-- **Configuración Info.plist:** Descripción de uso de permisos
-- **Ambiente:** Desarrollo local, no requiere conexión a servidores JAAK
-- **Dependencias:** CocoaPods para gestión de dependencias
-
-### 4.2 Configuración del entorno
-
-#### Paso 1. Instalación
-
-##### a) **Método principal de instalación**
-
-```ruby
-# Agrega a tu Podfile
-pod 'JAAKFaceDetector'
-
-# Ejecuta instalación
-pod install
-```
-
-##### b) **Configuración inicial**
-
-```xml
-<!-- Agregar a Info.plist -->
-<key>NSCameraUsageDescription</key>
-<string>Esta aplicación necesita acceso a la cámara para detectar rostros</string>
-```
-
-#### Paso 2. Configuración Avanzada
+#### Métodos principales
 
 ```swift
-import JAAKFaceDetector
+// Inicializar
+init(configuration: JAAKFaceDetectorConfiguration)
 
-// Configuración avanzada personalizada
-var config = JAAKFaceDetectorConfiguration()
-config.videoDuration = 5.0
-config.autoRecorder = true
-config.cameraPosition = .front
-config.videoQuality = .high
-config.enableInstructions = true
-config.instructionDelay = 3.0
+// Controlar detección
+func startDetection() throws
+func stopDetection()
+func toggleCamera()
 
-// Estilos personalizados
-config.timerStyles.textColor = .white
-config.timerStyles.circleColor = .blue
-config.timerStyles.strokeWidth = 8.0
-config.faceTrackerStyles.validColor = .green
-config.faceTrackerStyles.invalidColor = .red
+// Grabación manual
+func recordVideo(completion: @escaping (Result<JAAKFileResult, Error>) -> Void)
 ```
 
-### 4.3 Guía de implementación
-
-#### 4.3.1 Implementación básica
-
-##### a) **Ejemplo mínimo funcional:**
+#### Delegates
 
 ```swift
-import UIKit
-import JAAKFaceDetector
-
-class ViewController: UIViewController {
-    private var detector: JAAKFaceDetectorSDK?
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        // 1. Configuración básica
-        let config = JAAKFaceDetectorConfiguration()
-        config.videoDuration = 4.0
-        
-        // 2. Inicializar detector
-        detector = JAAKFaceDetectorSDK(configuration: config)
-        detector?.delegate = self
-        
-        // 3. Crear vista de preview
-        let previewView = detector?.createPreviewView()
-        previewView?.frame = view.bounds
-        view.addSubview(previewView!)
-        
-        // 4. Iniciar detección
-        try? detector?.startDetection()
-    }
-}
-
-// Implementar delegate
-extension ViewController: JAAKFaceDetectorSDKDelegate {
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didUpdateStatus status: JAAKFaceDetectorStatus) {
-        print("Status: \(status.rawValue)")
-    }
-    
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didCaptureFile result: JAAKFileResult) {
-        print("Video capturado: \(result.fileName ?? "unknown")")
-        // Procesar archivo de video
-    }
-    
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAKFaceDetectorError) {
-        print("Error: \(error.localizedDescription)")
-    }
-    
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didDetectFace message: JAAKFaceDetectionMessage) {
-        print("Face detected: \(message.faceExists), Position: \(message.correctPosition)")
-    }
+protocol JAAKFaceDetectorSDKDelegate {
+    func faceDetector(_ detector: JAAKFaceDetectorSDK, didUpdateStatus status: JAAKFaceDetectorStatus)
+    func faceDetector(_ detector: JAAKFaceDetectorSDK, didCaptureFile result: JAAKFileResult)
+    func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAKFaceDetectorError)
+    func faceDetector(_ detector: JAAKFaceDetectorSDK, didDetectFace message: JAAKFaceDetectionMessage)
 }
 ```
 
-##### b) **Implementación SwiftUI:**
+### Estructuras de datos
 
-```swift
-import SwiftUI
-import JAAKFaceDetector
-
-struct ContentView: View {
-    @State private var config = JAAKFaceDetectorConfiguration()
-    @State private var statusMessage = "Initializing..."
-    
-    var body: some View {
-        VStack {
-            // Vista del detector
-            JAAKFaceDetectorView(configuration: config, delegate: self)
-                .frame(height: 400)
-                .cornerRadius(16)
-            
-            // Status
-            Text(statusMessage)
-                .padding()
-            
-            // Controles
-            Button("Start Detection") {
-                // Iniciar detección
-            }
-            .padding()
-        }
-        .onAppear {
-            config.videoDuration = 5.0
-            config.autoRecorder = true
-        }
-    }
-}
-
-extension ContentView: JAAKFaceDetectorViewDelegate {
-    func faceDetectorView(status: JAAKFaceDetectorStatus) {
-        statusMessage = "Status: \(status.rawValue)"
-    }
-    
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didCaptureFile fileResult: JAAKFileResult) {
-        print("Video captured: \(fileResult.fileSize) bytes")
-    }
-    
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didEncounterError error: Error) {
-        statusMessage = "Error: \(error.localizedDescription)"
-    }
-    
-    func faceDetectorView(didDetectFace message: JAAKFaceDetectionMessage) {
-        if message.faceExists && message.correctPosition {
-            statusMessage = "Face detected in correct position"
-        }
-    }
-}
-```
-
-#### 4.3.2 Implementación avanzada
-
-```swift
-import JAAKFaceDetector
-
-class AdvancedFaceDetectorManager: NSObject {
-    private var detector: JAAKFaceDetectorSDK
-    private var isRecording = false
-    
-    init() {
-        // Configuración avanzada
-        var config = JAAKFaceDetectorConfiguration()
-        config.videoDuration = 10.0
-        config.autoRecorder = true
-        config.cameraPosition = .front
-        config.enableInstructions = true
-        config.instructionDelay = 2.0
-        
-        // Estilos personalizados
-        config.timerStyles.size = CGSize(width: 150, height: 150)
-        config.timerStyles.textColor = .white
-        config.timerStyles.circleColor = .systemBlue
-        config.timerStyles.strokeWidth = 6.0
-        
-        detector = JAAKFaceDetectorSDK(configuration: config)
-        super.init()
-        detector.delegate = self
-    }
-    
-    func startAdvancedDetection() {
-        do {
-            try detector.startDetection()
-            print("Detection started successfully")
-        } catch {
-            handleError(error)
-        }
-    }
-    
-    func recordVideoManually() {
-        guard !isRecording else { return }
-        
-        detector.recordVideo { [weak self] result in
-            switch result {
-            case .success(let fileResult):
-                self?.processVideoFile(fileResult)
-            case .failure(let error):
-                self?.handleError(error)
-            }
-        }
-    }
-    
-    private func processVideoFile(_ fileResult: JAAKFileResult) {
-        print("Processing video file: \(fileResult.fileName ?? "unknown")")
-        print("File size: \(fileResult.fileSize) bytes")
-        print("MIME type: \(fileResult.mimeType ?? "unknown")")
-        
-        // Guardar archivo
-        saveToDocuments(fileResult)
-        
-        // Subir a servidor
-        uploadToServer(fileResult)
-    }
-    
-    private func saveToDocuments(_ fileResult: JAAKFileResult) {
-        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-        
-        let fileName = fileResult.fileName ?? "video_\(Date().timeIntervalSince1970).mp4"
-        let fileURL = documentsPath.appendingPathComponent(fileName)
-        
-        do {
-            try fileResult.data.write(to: fileURL)
-            print("Video saved to: \(fileURL)")
-        } catch {
-            print("Error saving video: \(error)")
-        }
-    }
-    
-    private func uploadToServer(_ fileResult: JAAKFileResult) {
-        // Implementar subida al servidor usando base64
-        let base64String = fileResult.base64
-        // Enviar base64String al servidor
-    }
-    
-    private func handleError(_ error: Error) {
-        if let faceDetectorError = error as? JAAKFaceDetectorError {
-            print("Face detector error: \(faceDetectorError.localizedDescription)")
-            print("Error code: \(faceDetectorError.code ?? "unknown")")
-        } else {
-            print("General error: \(error.localizedDescription)")
-        }
-    }
-}
-
-extension AdvancedFaceDetectorManager: JAAKFaceDetectorSDKDelegate {
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didUpdateStatus status: JAAKFaceDetectorStatus) {
-        DispatchQueue.main.async {
-            switch status {
-            case .loading:
-                print("Loading AI models...")
-            case .loaded:
-                print("Models loaded successfully")
-            case .running:
-                print("Face detection active")
-            case .recording:
-                self.isRecording = true
-                print("Recording video...")
-            case .finished:
-                self.isRecording = false
-                print("Recording completed")
-            case .error:
-                print("Detection error occurred")
-            case .stopped:
-                print("Detection stopped")
-            case .notLoaded:
-                print("Models not loaded")
-            }
-        }
-    }
-    
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didCaptureFile result: JAAKFileResult) {
-        processVideoFile(result)
-    }
-    
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAKFaceDetectorError) {
-        handleError(error)
-    }
-    
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didDetectFace message: JAAKFaceDetectionMessage) {
-        if message.faceExists && message.correctPosition {
-            print("✅ Face detected in correct position")
-        } else if message.faceExists {
-            print("⚠️ Face detected but not in correct position")
-        } else {
-            print("❌ No face detected")
-        }
-    }
-}
-```
-
-### 4.4 Referencias/Métodos
-
-#### 4.4.1 Especificación principal
-
-**JAAKFaceDetectorSDK - Clase principal del SDK**
-
-**Descripción:** Clase principal que coordina la detección facial, grabación de video y gestión del ciclo de vida del detector. Proporciona una interfaz unificada para todas las funcionalidades del SDK, incluyendo detección en tiempo real, grabación automática y manual, y gestión de permisos.
-
-#### 4.4.2 Parámetros de entrada
-
-**JAAKFaceDetectorConfiguration:**
-
-| Parámetro | Tipo | Requerido | Descripción | Ejemplo |
-|-----------|------|-----------|-------------|---------|
-| `videoDuration` | `TimeInterval` | No | Duración de la grabación en segundos | `4.0` |
-| `autoRecorder` | `Bool` | No | Activar grabación automática al detectar rostro | `false` |
-| `cameraPosition` | `AVCaptureDevice.Position` | No | Posición de la cámara (front/back) | `.front` |
-| `videoQuality` | `AVCaptureSession.Preset` | No | Calidad de video | `.high` |
-| `enableInstructions` | `Bool` | No | Mostrar instrucciones al usuario | `true` |
-| `instructionDelay` | `TimeInterval` | No | Tiempo antes de mostrar instrucciones | `5.0` |
-| `timerStyles` | `JAAKTimerStyles` | No | Estilos del timer circular | `JAAKTimerStyles()` |
-| `faceTrackerStyles` | `JAAKFaceTrackerStyles` | No | Estilos del overlay de rostro | `JAAKFaceTrackerStyles()` |
-
-#### 4.4.3 Estructura de respuesta
-
-##### Respuesta Exitosa
-
-**JAAKFileResult:**
-
+#### JAAKFileResult
 ```swift
 public struct JAAKFileResult {
     public let data: Data           // Datos binarios del video
     public let base64: String       // Video codificado en base64
     public let mimeType: String?    // Tipo MIME (video/mp4)
     public let fileName: String?    // Nombre del archivo
-    public let fileSize: Int        // Tamaño del archivo en bytes
+    public let fileSize: Int        // Tamaño en bytes
 }
 ```
 
-**JAAKFaceDetectionMessage:**
-
+#### JAAKFaceDetectionMessage
 ```swift
 public struct JAAKFaceDetectionMessage {
     public let label: String            // Mensaje descriptivo
@@ -750,19 +580,23 @@ public struct JAAKFaceDetectionMessage {
 }
 ```
 
-##### Respuestas de Error
-
-**JAAKFaceDetectorError:**
-
+#### Estados del detector
 ```swift
-public struct JAAKFaceDetectorError: LocalizedError {
-    public let label: String        // Descripción del error
-    public let code: String?        // Código de error específico
-    public let details: Any?        // Detalles adicionales del error
+public enum JAAKFaceDetectorStatus: String {
+    case loading = "loading"
+    case loaded = "loaded"
+    case running = "running"
+    case recording = "recording"
+    case finished = "finished"
+    case error = "error"
+    case stopped = "stopped"
+    case notLoaded = "not-loaded"
 }
 ```
 
-**Tipos de Error:**
+## Manejo de errores
+
+### Tipos de error
 
 ```swift
 public enum JAAKFaceDetectorErrorType: String {
@@ -775,140 +609,61 @@ public enum JAAKFaceDetectorErrorType: String {
 }
 ```
 
-### 4.5 Componentes adicionales
+### Ejemplo de manejo de errores
 
-#### a) **Componentes UI**
+```swift
+func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAKFaceDetectorError) {
+    switch error.code {
+    case "camera-access":
+        // Solicitar permisos de cámara
+        break
+    case "model-loading":
+        // Reintentar carga del modelo
+        break
+    default:
+        print("Error: \(error.localizedDescription)")
+    }
+}
+```
 
-- **JAAKFaceDetectorView:** Componente SwiftUI para integración declarativa
-- **JAAKRecordingTimer:** Timer circular con progreso visual
-- **JAAKFaceTrackingOverlay:** Overlay de seguimiento facial en tiempo real
-- **JAAKInstructionController:** Sistema de instrucciones interactivas
+## Solución de problemas
 
-#### b) **Utilidades**
+### Problemas comunes
 
-- **JAAKPermissionManager:** Gestión de permisos de cámara
-- **JAAKCameraManager:** Gestión de sesión de cámara y captura
-- **JAAKVideoRecorder:** Grabación y procesamiento de video
-- **JAAKFaceDetectionEngine:** Motor de detección facial con MediaPipe
+#### La cámara no se inicializa
+- **Causa:** Permisos de cámara denegados
+- **Solución:** Verificar permisos y configuración de Info.plist
 
-### 4.6 Pruebas y validación
+#### El detector no detecta rostros
+- **Causa:** Iluminación insuficiente o rostro parcialmente oculto
+- **Solución:** Mejorar iluminación y asegurar rostro completamente visible
 
-#### a) **Casos de prueba**
+#### La grabación termina inmediatamente
+- **Causa:** Configuración de duración incorrecta
+- **Solución:** Verificar `videoDuration` y reiniciar detector
 
-| Caso de Prueba | Entrada/Configuración | Resultado Esperado | Criterio de Éxito |
-|----------------|----------------------|-------------------|-------------------|
-| Inicialización básica | `JAAKFaceDetectorConfiguration()` por defecto | Detector inicializado correctamente | Status cambia a `.loaded` |
-| Detección facial | Rostro visible en cámara | Detección exitosa | `didDetectFace` con `faceExists = true` |
-| Grabación automática | `autoRecorder = true`, rostro detectado | Video grabado automáticamente | `didCaptureFile` llamado con `JAAKFileResult` |
-| Cambio de cámara | `toggleCamera()` | Cámara cambiada exitosamente | Vista actualizada con nueva cámara |
-| Manejo de permisos | Permisos denegados | Error de permisos | `didEncounterError` con tipo `permissionDenied` |
-| Grabación manual | `recordVideo()` llamado | Video grabado | Archivo de video válido generado |
+### Códigos de error específicos
 
-### 4.7 Solución de problemas
+| Código | Descripción | Solución |
+|--------|-------------|----------|
+| `CAMERA_ACCESS_DENIED` | Permisos denegados | Solicitar permisos nuevamente |
+| `MODEL_LOADING_FAILED` | Error al cargar modelo | Reinstalar SDK |
+| `RECORDING_IN_PROGRESS` | Grabación en progreso | Esperar a que termine |
+| `DEVICE_NOT_SUPPORTED` | Dispositivo no compatible | Usar dispositivo más reciente |
 
-#### a) **Problemas comunes**
-
-| Problema: | La cámara no se inicializa |
-|-----------|----------------------------|
-| **Descripción:** | El detector no puede acceder a la cámara y permanece en estado `loading` |
-| **Causas posibles:** | Permisos de cámara denegados, dispositivo ocupado, configuración incorrecta |
-| **Solución:** | Verificar permisos, revisar Info.plist, asegurar que ninguna otra app use la cámara |
-| **Código de ejemplo:** | `let status = AVCaptureDevice.authorizationStatus(for: .video)` <br> `if status == .denied { UIApplication.shared.open(settingsUrl) }` |
-
-| Problema: | El detector no detecta rostros |
-|-----------|------------------------------|
-| **Descripción:** | La detección facial no funciona correctamente |
-| **Causas posibles:** | Iluminación insuficiente, rostro parcialmente oculto, configuración incorrecta |
-| **Solución:** | Mejorar iluminación, asegurar rostro completamente visible, verificar configuración |
-| **Código de ejemplo:** | `if config.disableFaceDetection { config.disableFaceDetection = false; detector.updateConfiguration(config) }` |
-
-| Problema: | La grabación termina inmediatamente |
-|-----------|-------------------------------------|
-| **Descripción:** | El video se graba pero termina al instante |
-| **Causas posibles:** | Configuración de duración incorrecta, problema de sincronización |
-| **Solución:** | Verificar `videoDuration`, reiniciar detector |
-| **Código de ejemplo:** | `config.videoDuration = max(config.videoDuration, 2.0); detector.updateConfiguration(config)` |
-
-#### b) **Códigos de error específicos**
-
-| Código | Descripción | Causa | Solución |
-|--------|-------------|-------|----------|
-| `CAMERA_ACCESS_DENIED` | Permisos de cámara denegados | Usuario denegó permisos | Solicitar permisos nuevamente o dirigir a configuración |
-| `MODEL_LOADING_FAILED` | Error al cargar modelo AI | Modelo corrupto o incompatible | Reinstalar SDK o verificar versión |
-| `RECORDING_IN_PROGRESS` | Grabación ya en progreso | Múltiples llamadas a `recordVideo()` | Esperar a que termine grabación actual |
-| `DEVICE_NOT_SUPPORTED` | Dispositivo no compatible | Hardware insuficiente | Usar dispositivo más reciente |
-| `VIDEO_PROCESSING_FAILED` | Error procesando video | Falta de memoria o archivo corrupto | Reiniciar app o reducir calidad |
-
----
-
-> **Contacta al equipo de soporte** ([soporte@jaak.ai](mailto:soporte@jaak.ai)) cuando:
-> 
-> - Los pasos de troubleshooting no resuelven el problema
-> - Recibes errores no documentados
-> - Necesitas configuraciones especiales para tu caso de uso
-> - Experimentas problemas de rendimiento persistentes
-> 
-> **Información a incluir:** Logs del detector, configuración usada, modelo de dispositivo, versión iOS, pasos para reproducir el problema
-
----
-
-### 4.8 Consideraciones importantes
-
-#### a) **Seguridad**
-
-- **Permisos:** Solo solicitar permisos necesarios (cámara obligatorio)
-- **Datos:** Los videos se procesan localmente, no se envían automáticamente a servidores
-- **Privacidad:** Informar claramente al usuario sobre el uso de la cámara
-- **Almacenamiento:** Implementar limpieza automática de archivos temporales
-
-#### b) **Rendimiento**
-
-- **Memoria:** El SDK maneja automáticamente la memoria, pero monitorear uso en dispositivos antiguos
-- **Batería:** La detección facial consume batería, optimizar para uso prolongado
-- **Procesamiento:** Usar configuraciones de calidad apropiadas para el hardware
-- **Threading:** Todos los callbacks se ejecutan en el hilo principal
-
-#### c) **Calidad**
-
-- **Iluminación:** Funciona mejor con buena iluminación frontal
-- **Distancia:** Rostro debe estar a 30-60cm de la cámara
-- **Orientación:** Funciona mejor con rostro centrado y vertical
-- **Estabilidad:** Evitar movimientos bruscos durante la grabación
-
----
-
-## 5. **Anexos**
-
-### **Anexo A.** Glosario de términos
-
-| Término | Definición |
-|---------|------------|
-| **BlazeFace** | Modelo de detección facial de Google MediaPipe optimizado para móviles |
-| **MediaPipe** | Framework de ML de Google para procesamiento multimedia en tiempo real |
-| **AVCaptureSession** | Clase de iOS para coordinar entrada y salida de datos multimedia |
-| **Auto-recorder** | Funcionalidad que inicia grabación automáticamente al detectar rostro |
-| **Face tracking** | Seguimiento facial en tiempo real con overlay visual |
-
-### **Anexo B.** Enlaces de referencia
-
-- [CocoaPods Pod Page](https://cocoapods.org/pods/JAAKFaceDetector)
-- [Apple AVFoundation Documentation](https://developer.apple.com/documentation/avfoundation)
-- [MediaPipe Face Detection](https://google.github.io/mediapipe/solutions/face_detection.html)
-- [iOS Camera Permissions](https://developer.apple.com/documentation/avfoundation/cameras_and_media_capture/requesting_authorization_for_media_capture_on_ios)
-
----
-
-## 6. **Licencia**
+## Licencia
 
 JAAKFaceDetector está disponible bajo la licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
 
-### **Soporte**
+## Soporte
 
 Para soporte técnico o reportar issues:
-- Email: [diego.bruno@jaak.ai](mailto:diego.bruno@jaak.ai)
+- Email: [soporte@jaak.ai](mailto:soporte@jaak.ai)
 - Issues: [GitHub Issues](https://github.com/BrunoSolis5/jaak-face-detector-ios/issues)
 
-### **Historial de versiones**
+---
+
+### Historial de versiones
 
 | Versión | Fecha | Descripción |
 |---------|-------|-------------|
