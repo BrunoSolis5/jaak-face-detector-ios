@@ -39,7 +39,10 @@ internal class JAAKInstructionView: UIView {
     private let instructionLabel = UILabel()
     private let instructionSubtextLabel = UILabel()
     private let animationContainerView = UIView()
-    private let progressView = UIProgressView(progressViewStyle: .default)
+    private let progressContainerView = UIView()
+    private let progressSegmentsStackView = UIStackView()
+    private var progressSegments: [UIView] = []
+    private var segmentFills: [UIView] = []
     private let helpButton = UIButton()
     private let watermarkImageView = UIImageView()
     
@@ -51,7 +54,12 @@ internal class JAAKInstructionView: UIView {
     // Animation
     private var currentAnimationView: UIView?
     private var stepTimer: Timer?
+    private var progressTimer: Timer?
     private var isPaused = false
+    private var currentProgress: Float = 0.0
+    private var targetProgress: Float = 0.0
+    private var stepStartTime: Date?
+    private var totalStepDuration: TimeInterval = 0
     
     weak var delegate: JAAKInstructionViewDelegate?
     
@@ -94,12 +102,16 @@ internal class JAAKInstructionView: UIView {
         buttonContainerView.isHidden = false
         buttonContainerView.alpha = 0.0
         
+        progressContainerView.isHidden = false
+        progressContainerView.alpha = 0.0
+        
         // Fade in animation like webcomponent
         UIView.animate(withDuration: 0.5, delay: 0, options: [.curveEaseOut], animations: {
             self.backdropView.alpha = 1.0
             self.contentView.alpha = 1.0
             self.contentView.transform = .identity
             self.buttonContainerView.alpha = 1.0
+            self.progressContainerView.alpha = 1.0
         }) { _ in
             self.startInstructionSequence()
         }
@@ -110,18 +122,27 @@ internal class JAAKInstructionView: UIView {
         currentState = .hidden
         stopCurrentTimer()
         
-        // Reset pause state
+        // Reset all state
         isPaused = false
         pauseButton.setTitle("Pausar", for: .normal)
+        currentProgress = 0.0
+        targetProgress = 0.0
+        
+        // Reset all segments to 0 for next time
+        for i in 0..<segmentFills.count {
+            updateIndividualSegmentProgress(stepIndex: i, progress: 0.0)
+        }
         
         UIView.animate(withDuration: 0.3) {
             self.backdropView.alpha = 0.0
             self.contentView.alpha = 0.0
             self.buttonContainerView.alpha = 0.0
+            self.progressContainerView.alpha = 0.0
         } completion: { _ in
             self.backdropView.isHidden = true
             self.contentView.isHidden = true
             self.buttonContainerView.isHidden = true
+            self.progressContainerView.isHidden = true
             self.delegate?.instructionView(self, didComplete: false)
             
             // Notify delegate that instructions ended (to resume detection)
@@ -149,7 +170,59 @@ internal class JAAKInstructionView: UIView {
     /// Update instruction progress
     /// - Parameter progress: progress from 0.0 to 1.0
     func updateProgress(_ progress: Float) {
-        progressView.setProgress(progress, animated: true)
+        updateSegmentedProgress(progress)
+    }
+    
+    private func updateSegmentedProgress(_ progress: Float) {
+        // Legacy function - convert to individual segment updates
+        let totalSegments = segmentFills.count
+        guard totalSegments > 0 else { return }
+        
+        let segmentProgress = progress * Float(totalSegments)
+        let currentSegmentIndex = min(Int(segmentProgress), totalSegments - 1)
+        let currentSegmentFill = segmentProgress - Float(currentSegmentIndex)
+        
+        // Update segments with new individual logic
+        for index in 0..<totalSegments {
+            if index < currentSegmentIndex {
+                updateIndividualSegmentProgress(stepIndex: index, progress: 1.0)
+            } else if index == currentSegmentIndex {
+                updateIndividualSegmentProgress(stepIndex: index, progress: currentSegmentFill)
+            } else {
+                updateIndividualSegmentProgress(stepIndex: index, progress: 0.0)
+            }
+        }
+    }
+    
+    private func updateIndividualSegmentProgress(stepIndex: Int, progress: Float) {
+        guard stepIndex < segmentFills.count && stepIndex < progressSegments.count else { return }
+        
+        let fill = segmentFills[stepIndex]
+        let segment = progressSegments[stepIndex]
+        
+        // Remove existing width constraint
+        fill.constraints.forEach { constraint in
+            if constraint.firstAttribute == .width {
+                constraint.isActive = false
+            }
+        }
+        
+        let fillWidth = CGFloat(max(0, min(1, progress))) // Clamp between 0 and 1
+        
+        // Update segment background based on state
+        if progress > 0 {
+            segment.backgroundColor = UIColor.white.withAlphaComponent(0.3) // Active background
+        } else {
+            segment.backgroundColor = UIColor.white.withAlphaComponent(0.2) // Inactive background
+        }
+        
+        // Apply new width constraint with animation
+        let widthConstraint = fill.widthAnchor.constraint(equalTo: segment.widthAnchor, multiplier: fillWidth)
+        widthConstraint.isActive = true
+        
+        UIView.animate(withDuration: 0.05) {
+            segment.layoutIfNeeded()
+        }
     }
     
     /// Show a direct instruction message immediately
@@ -222,11 +295,8 @@ internal class JAAKInstructionView: UIView {
         animationContainerView.isHidden = true
         contentView.addSubview(animationContainerView)
         
-        // Progress view
-        progressView.progressTintColor = .white
-        progressView.trackTintColor = UIColor.white.withAlphaComponent(0.3)
-        progressView.progress = 0.0
-        contentView.addSubview(progressView)
+        // Setup segmented progress bar (like webcomponent)
+        setupSegmentedProgressBar()
         
         // Help button (?) - positioned at top-left of the main view
         helpButton.setTitle("?", for: .normal)
@@ -262,6 +332,8 @@ internal class JAAKInstructionView: UIView {
         contentView.alpha = 0.0
         buttonContainerView.isHidden = true
         buttonContainerView.alpha = 0.0
+        progressContainerView.isHidden = true
+        progressContainerView.alpha = 0.0
     }
     
     private func setupInstructionButtons() {
@@ -311,6 +383,47 @@ internal class JAAKInstructionView: UIView {
         buttonContainerView.addSubview(nextButton)
     }
     
+    private func setupSegmentedProgressBar() {
+        // Progress container (matching webcomponent positioning)
+        progressContainerView.backgroundColor = .clear
+        addSubview(progressContainerView)
+        
+        // Stack view for segments
+        progressSegmentsStackView.axis = .horizontal
+        progressSegmentsStackView.spacing = 8 // gap between segments
+        progressSegmentsStackView.distribution = .fillEqually
+        progressContainerView.addSubview(progressSegmentsStackView)
+        
+        // Create 2 segments (matching webcomponent)
+        for i in 0..<2 {
+            // Segment background
+            let segment = UIView()
+            segment.backgroundColor = UIColor.white.withAlphaComponent(0.2)
+            segment.layer.cornerRadius = 2
+            segment.clipsToBounds = true
+            
+            // Segment fill
+            let fill = UIView()
+            fill.backgroundColor = .white
+            fill.layer.cornerRadius = 2
+            
+            segment.addSubview(fill)
+            progressSegmentsStackView.addArrangedSubview(segment)
+            
+            progressSegments.append(segment)
+            segmentFills.append(fill)
+            
+            // Setup fill constraints
+            fill.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                fill.topAnchor.constraint(equalTo: segment.topAnchor),
+                fill.leadingAnchor.constraint(equalTo: segment.leadingAnchor),
+                fill.bottomAnchor.constraint(equalTo: segment.bottomAnchor),
+                fill.widthAnchor.constraint(equalTo: segment.widthAnchor, multiplier: 0) // Start with 0 width
+            ])
+        }
+    }
+    
     // MARK: - Button Actions
     
     @objc private func pauseButtonTapped() {
@@ -318,11 +431,11 @@ internal class JAAKInstructionView: UIView {
         isPaused.toggle()
         
         if isPaused {
-            // Pause the timer
+            // Pause both timers
             stopCurrentTimer()
             pauseButton.setTitle("Continuar", for: .normal)
         } else {
-            // Resume the timer
+            // Resume both timers
             resumeCurrentStep()
             pauseButton.setTitle("Pausar", for: .normal)
         }
@@ -342,15 +455,68 @@ internal class JAAKInstructionView: UIView {
         
         let step = instructionSteps[currentStepIndex]
         
-        // Resume timer with remaining duration (simplified - use full duration)
-        stepTimer = Timer.scheduledTimer(withTimeInterval: step.duration, repeats: false) { [weak self] _ in
+        // Get current progress of the individual segment
+        let currentSegmentProgress = getCurrentSegmentProgress()
+        let remainingDuration = step.duration * (1.0 - Double(currentSegmentProgress))
+        
+        // Reset start time for continuous progress calculation
+        let elapsedTime = step.duration - remainingDuration
+        stepStartTime = Date().addingTimeInterval(-elapsedTime)
+        
+        // Resume both timers
+        startProgressTimer()
+        
+        stepTimer = Timer.scheduledTimer(withTimeInterval: remainingDuration, repeats: false) { [weak self] _ in
+            self?.stopProgressTimer()
             self?.moveToNextStep()
         }
+    }
+    
+    private func getCurrentSegmentProgress() -> Float {
+        // Get the current fill width of the active segment
+        guard currentStepIndex < segmentFills.count else { return 0.0 }
+        
+        let fill = segmentFills[currentStepIndex]
+        let segment = progressSegments[currentStepIndex]
+        
+        // Find the width constraint to get current progress
+        for constraint in fill.constraints {
+            if constraint.firstAttribute == .width && constraint.secondItem === segment {
+                return Float(constraint.multiplier)
+            }
+        }
+        
+        return 0.0
     }
     
     private func stopCurrentTimer() {
         stepTimer?.invalidate()
         stepTimer = nil
+        stopProgressTimer()
+    }
+    
+    private func startProgressTimer() {
+        stopProgressTimer() // Stop any existing timer
+        
+        // Update progress every 50ms for smooth animation (20 FPS)
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            self?.updateContinuousProgress()
+        }
+    }
+    
+    private func stopProgressTimer() {
+        progressTimer?.invalidate()
+        progressTimer = nil
+    }
+    
+    private func updateContinuousProgress() {
+        guard let startTime = stepStartTime, !isPaused else { return }
+        
+        let elapsedTime = Date().timeIntervalSince(startTime)
+        let progressRatio = min(elapsedTime / totalStepDuration, 1.0)
+        
+        // Update individual segment progress (0 to 1 for current step)
+        updateIndividualSegmentProgress(stepIndex: currentStepIndex, progress: Float(progressRatio))
     }
     
     private func setupLayout() {
@@ -360,7 +526,8 @@ internal class JAAKInstructionView: UIView {
         instructionLabel.translatesAutoresizingMaskIntoConstraints = false
         instructionSubtextLabel.translatesAutoresizingMaskIntoConstraints = false
         animationContainerView.translatesAutoresizingMaskIntoConstraints = false
-        progressView.translatesAutoresizingMaskIntoConstraints = false
+        progressContainerView.translatesAutoresizingMaskIntoConstraints = false
+        progressSegmentsStackView.translatesAutoresizingMaskIntoConstraints = false
         helpButton.translatesAutoresizingMaskIntoConstraints = false
         watermarkImageView.translatesAutoresizingMaskIntoConstraints = false
         buttonContainerView.translatesAutoresizingMaskIntoConstraints = false
@@ -401,11 +568,17 @@ internal class JAAKInstructionView: UIView {
             instructionSubtextLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             instructionSubtextLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
-            // Progress view at top (like webcomponent)
-            progressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 40),
-            progressView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            progressView.widthAnchor.constraint(equalToConstant: 300),
-            progressView.heightAnchor.constraint(equalToConstant: 4),
+            // Progress container at top (like webcomponent)
+            progressContainerView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 40),
+            progressContainerView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            progressContainerView.widthAnchor.constraint(equalToConstant: 300),
+            progressContainerView.heightAnchor.constraint(equalToConstant: 4),
+            
+            // Progress segments stack view
+            progressSegmentsStackView.topAnchor.constraint(equalTo: progressContainerView.topAnchor),
+            progressSegmentsStackView.leadingAnchor.constraint(equalTo: progressContainerView.leadingAnchor),
+            progressSegmentsStackView.trailingAnchor.constraint(equalTo: progressContainerView.trailingAnchor),
+            progressSegmentsStackView.bottomAnchor.constraint(equalTo: progressContainerView.bottomAnchor),
             
             // Button container at bottom (like webcomponent)
             buttonContainerView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -40),
@@ -483,7 +656,18 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func startInstructionSequence() {
+        // Reset all progress tracking
         currentStepIndex = 0
+        currentProgress = 0.0
+        targetProgress = 0.0
+        stepStartTime = nil
+        totalStepDuration = 0
+        
+        // Reset ALL individual segments to 0%
+        for i in 0..<segmentFills.count {
+            updateIndividualSegmentProgress(stepIndex: i, progress: 0.0)
+        }
+        
         showCurrentStep()
     }
     
@@ -507,25 +691,36 @@ internal class JAAKInstructionView: UIView {
             instructionSubtextLabel.text = subtexts[currentStepIndex]
         }
         
-        // Update progress
-        let progress = Float(currentStepIndex + 1) / Float(instructionSteps.count)
-        updateProgress(progress)
+        // Setup progress tracking
+        targetProgress = Float(currentStepIndex + 1) / Float(instructionSteps.count)
+        totalStepDuration = step.duration
+        stepStartTime = Date()
         
-        // Start timer for next step (only if not paused)
+        // Start continuous progress updates (only if not paused)
         if !isPaused {
+            startProgressTimer()
+            
+            // Start timer for next step
             stepTimer = Timer.scheduledTimer(withTimeInterval: step.duration, repeats: false) { [weak self] _ in
+                self?.stopProgressTimer()
                 self?.moveToNextStep()
             }
         }
     }
     
     private func moveToNextStep() {
+        // Complete current step's progress bar at 100%
+        if currentStepIndex < segmentFills.count {
+            updateIndividualSegmentProgress(stepIndex: currentStepIndex, progress: 1.0)
+        }
+        
         currentStepIndex += 1
         
         if currentStepIndex < instructionSteps.count {
-            // Show next step immediately without delay
+            // Start next step with fresh progress (0%)
             showCurrentStep()
         } else {
+            // All steps completed
             completeInstructions()
         }
     }
