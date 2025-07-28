@@ -16,7 +16,7 @@ internal class JAAKFaceTrackingOverlay: UIView {
     private var imageHeight: CGFloat = 0
     
     // Overlay configuration
-    private let lineWidth: CGFloat = 3.0
+    private let lineWidth: CGFloat = 5.0
     private let cornerRadius: CGFloat = 8.0
     
     // Face detection structure (following MediaPipe pattern)
@@ -232,12 +232,9 @@ internal class JAAKFaceTrackingOverlay: UIView {
         context.setLineWidth(lineWidth)
         let strokeColor = detection.isValid ? configuration.validColor : configuration.invalidColor
         context.setStrokeColor(strokeColor.cgColor)
-        context.setFillColor(UIColor.clear.cgColor)
         
-        // Draw rounded rectangle using the clipped bounds
-        let path = UIBezierPath(roundedRect: clippedRect, cornerRadius: cornerRadius)
-        context.addPath(path.cgPath)
-        context.strokePath()
+        // Draw only corners instead of complete edges
+        drawCorners(in: context, rect: clippedRect, color: strokeColor)
     }
     
     /// Transform detection coordinates to view coordinates (MediaPipe official pattern)
@@ -309,6 +306,39 @@ internal class JAAKFaceTrackingOverlay: UIView {
         return (xOffset, yOffset, scaleFactor)
     }
     
+    /// Draw corner brackets instead of complete rectangle edges
+    /// - Parameters:
+    ///   - context: Graphics context
+    ///   - rect: Rectangle bounds
+    ///   - color: Stroke color
+    private func drawCorners(in context: CGContext, rect: CGRect, color: UIColor) {
+        let cornerLength: CGFloat = 30.0 // Length of each corner line
+        
+        context.setStrokeColor(color.cgColor)
+        context.setLineCap(.round)
+        
+        // Top-left corner
+        context.move(to: CGPoint(x: rect.minX, y: rect.minY + cornerLength))
+        context.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+        context.addLine(to: CGPoint(x: rect.minX + cornerLength, y: rect.minY))
+        
+        // Top-right corner
+        context.move(to: CGPoint(x: rect.maxX - cornerLength, y: rect.minY))
+        context.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        context.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + cornerLength))
+        
+        // Bottom-right corner
+        context.move(to: CGPoint(x: rect.maxX, y: rect.maxY - cornerLength))
+        context.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        context.addLine(to: CGPoint(x: rect.maxX - cornerLength, y: rect.maxY))
+        
+        // Bottom-left corner
+        context.move(to: CGPoint(x: rect.minX + cornerLength, y: rect.maxY))
+        context.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        context.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - cornerLength))
+        
+        context.strokePath()
+    }
     
     override func layoutSubviews() {
         super.layoutSubviews()
