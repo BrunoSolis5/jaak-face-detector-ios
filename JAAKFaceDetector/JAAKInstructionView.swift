@@ -43,9 +43,15 @@ internal class JAAKInstructionView: UIView {
     private let helpButton = UIButton()
     private let watermarkImageView = UIImageView()
     
+    // Instruction buttons
+    private let buttonContainerView = UIView()
+    private let pauseButton = UIButton(type: .system)
+    private let nextButton = UIButton(type: .system)
+    
     // Animation
     private var currentAnimationView: UIView?
     private var stepTimer: Timer?
+    private var isPaused = false
     
     weak var delegate: JAAKInstructionViewDelegate?
     
@@ -85,11 +91,15 @@ internal class JAAKInstructionView: UIView {
         contentView.alpha = 0.0
         contentView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
         
+        buttonContainerView.isHidden = false
+        buttonContainerView.alpha = 0.0
+        
         // Fade in animation like webcomponent
         UIView.animate(withDuration: 0.5, delay: 0, options: [.curveEaseOut], animations: {
             self.backdropView.alpha = 1.0
             self.contentView.alpha = 1.0
             self.contentView.transform = .identity
+            self.buttonContainerView.alpha = 1.0
         }) { _ in
             self.startInstructionSequence()
         }
@@ -100,12 +110,18 @@ internal class JAAKInstructionView: UIView {
         currentState = .hidden
         stopCurrentTimer()
         
+        // Reset pause state
+        isPaused = false
+        pauseButton.setTitle("Pausar", for: .normal)
+        
         UIView.animate(withDuration: 0.3) {
             self.backdropView.alpha = 0.0
             self.contentView.alpha = 0.0
+            self.buttonContainerView.alpha = 0.0
         } completion: { _ in
             self.backdropView.isHidden = true
             self.contentView.isHidden = true
+            self.buttonContainerView.isHidden = true
             self.delegate?.instructionView(self, didComplete: false)
             
             // Notify delegate that instructions ended (to resume detection)
@@ -228,6 +244,9 @@ internal class JAAKInstructionView: UIView {
         addSubview(watermarkImageView)
         loadWatermarkImage()
         
+        // Setup instruction buttons (matching webcomponent style)
+        setupInstructionButtons()
+        
         // Layout
         setupLayout()
         
@@ -241,6 +260,97 @@ internal class JAAKInstructionView: UIView {
         backdropView.alpha = 0.0
         contentView.isHidden = true
         contentView.alpha = 0.0
+        buttonContainerView.isHidden = true
+        buttonContainerView.alpha = 0.0
+    }
+    
+    private func setupInstructionButtons() {
+        // Button container - add to backdrop directly for interaction
+        buttonContainerView.backgroundColor = .clear
+        buttonContainerView.isUserInteractionEnabled = true
+        addSubview(buttonContainerView)
+        
+        // Pause button (matching webcomponent style)
+        pauseButton.setTitle("Pausar", for: .normal)
+        pauseButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        pauseButton.setTitleColor(.white, for: .normal)
+        pauseButton.backgroundColor = UIColor.white.withAlphaComponent(0.1)
+        pauseButton.layer.borderWidth = 1
+        pauseButton.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
+        pauseButton.layer.cornerRadius = 20
+        pauseButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+        
+        // Enable interaction
+        pauseButton.isUserInteractionEnabled = true
+        
+        // Add hover effects
+        pauseButton.addTarget(self, action: #selector(pauseButtonTapped), for: .touchUpInside)
+        pauseButton.addTarget(self, action: #selector(buttonTouchDown(_:)), for: .touchDown)
+        pauseButton.addTarget(self, action: #selector(buttonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+        
+        buttonContainerView.addSubview(pauseButton)
+        
+        // Next button (matching webcomponent style)
+        nextButton.setTitle("Siguiente", for: .normal)
+        nextButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        nextButton.setTitleColor(.white, for: .normal)
+        nextButton.backgroundColor = UIColor.white.withAlphaComponent(0.1)
+        nextButton.layer.borderWidth = 1
+        nextButton.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
+        nextButton.layer.cornerRadius = 20
+        nextButton.contentEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
+        
+        // Enable interaction
+        nextButton.isUserInteractionEnabled = true
+        
+        // Add hover effects
+        nextButton.addTarget(self, action: #selector(nextButtonTapped), for: .touchUpInside)
+        nextButton.addTarget(self, action: #selector(buttonTouchDown(_:)), for: .touchDown)
+        nextButton.addTarget(self, action: #selector(buttonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+        
+        buttonContainerView.addSubview(nextButton)
+    }
+    
+    // MARK: - Button Actions
+    
+    @objc private func pauseButtonTapped() {
+        print("🔘 [JAAKInstructionView] Pause button tapped")
+        isPaused.toggle()
+        
+        if isPaused {
+            // Pause the timer
+            stopCurrentTimer()
+            pauseButton.setTitle("Continuar", for: .normal)
+        } else {
+            // Resume the timer
+            resumeCurrentStep()
+            pauseButton.setTitle("Pausar", for: .normal)
+        }
+    }
+    
+    @objc private func nextButtonTapped() {
+        print("➡️ [JAAKInstructionView] Next button tapped")
+        // Skip to next step immediately
+        stopCurrentTimer()
+        isPaused = false
+        pauseButton.setTitle("Pausar", for: .normal)
+        moveToNextStep()
+    }
+    
+    private func resumeCurrentStep() {
+        guard currentStepIndex < instructionSteps.count else { return }
+        
+        let step = instructionSteps[currentStepIndex]
+        
+        // Resume timer with remaining duration (simplified - use full duration)
+        stepTimer = Timer.scheduledTimer(withTimeInterval: step.duration, repeats: false) { [weak self] _ in
+            self?.moveToNextStep()
+        }
+    }
+    
+    private func stopCurrentTimer() {
+        stepTimer?.invalidate()
+        stepTimer = nil
     }
     
     private func setupLayout() {
@@ -253,6 +363,9 @@ internal class JAAKInstructionView: UIView {
         progressView.translatesAutoresizingMaskIntoConstraints = false
         helpButton.translatesAutoresizingMaskIntoConstraints = false
         watermarkImageView.translatesAutoresizingMaskIntoConstraints = false
+        buttonContainerView.translatesAutoresizingMaskIntoConstraints = false
+        pauseButton.translatesAutoresizingMaskIntoConstraints = false
+        nextButton.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
             // Backdrop - full screen overlay
@@ -294,8 +407,24 @@ internal class JAAKInstructionView: UIView {
             progressView.widthAnchor.constraint(equalToConstant: 300),
             progressView.heightAnchor.constraint(equalToConstant: 4),
             
-            // Content view bottom constraint
-            instructionSubtextLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            // Button container at bottom (like webcomponent)
+            buttonContainerView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -40),
+            buttonContainerView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            buttonContainerView.heightAnchor.constraint(equalToConstant: 44),
+            
+            // Pause button
+            pauseButton.leadingAnchor.constraint(equalTo: buttonContainerView.leadingAnchor),
+            pauseButton.centerYAnchor.constraint(equalTo: buttonContainerView.centerYAnchor),
+            pauseButton.heightAnchor.constraint(equalToConstant: 36),
+            
+            // Next button
+            nextButton.leadingAnchor.constraint(equalTo: pauseButton.trailingAnchor, constant: 12),
+            nextButton.trailingAnchor.constraint(equalTo: buttonContainerView.trailingAnchor),
+            nextButton.centerYAnchor.constraint(equalTo: buttonContainerView.centerYAnchor),
+            nextButton.heightAnchor.constraint(equalToConstant: 36),
+            
+            // Content view bottom constraint (above buttons)
+            instructionSubtextLabel.bottomAnchor.constraint(lessThanOrEqualTo: buttonContainerView.topAnchor, constant: -30),
             
             // Help button (?) - positioned at top-left of the full screen
             helpButton.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 16),
@@ -382,9 +511,11 @@ internal class JAAKInstructionView: UIView {
         let progress = Float(currentStepIndex + 1) / Float(instructionSteps.count)
         updateProgress(progress)
         
-        // Start timer for next step
-        stepTimer = Timer.scheduledTimer(withTimeInterval: step.duration, repeats: false) { [weak self] _ in
-            self?.moveToNextStep()
+        // Start timer for next step (only if not paused)
+        if !isPaused {
+            stepTimer = Timer.scheduledTimer(withTimeInterval: step.duration, repeats: false) { [weak self] _ in
+                self?.moveToNextStep()
+            }
         }
     }
     
@@ -594,11 +725,6 @@ internal class JAAKInstructionView: UIView {
         })
     }
     
-    private func stopCurrentTimer() {
-        stepTimer?.invalidate()
-        stepTimer = nil
-    }
-    
     private func loadWatermarkImage() {
         let urlString = "https://storage.googleapis.com/jaak-static/commons/powered-by-jaak.png"
         guard let url = URL(string: urlString) else {
@@ -643,6 +769,24 @@ internal class JAAKInstructionView: UIView {
     
     deinit {
         stopCurrentTimer()
+    }
+    
+    // MARK: - Button Visual Effects
+    
+    @objc private func buttonTouchDown(_ sender: UIButton) {
+        UIView.animate(withDuration: 0.1) {
+            sender.backgroundColor = UIColor.white.withAlphaComponent(0.2)
+            sender.layer.borderColor = UIColor.white.withAlphaComponent(0.5).cgColor
+            sender.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+        }
+    }
+    
+    @objc private func buttonTouchUp(_ sender: UIButton) {
+        UIView.animate(withDuration: 0.2, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: [], animations: {
+            sender.backgroundColor = UIColor.white.withAlphaComponent(0.1)
+            sender.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
+            sender.transform = .identity
+        })
     }
 }
 
