@@ -467,11 +467,14 @@ internal class JAAKInstructionView: UIView {
     }
     
     @objc private func nextButtonTapped() {
-        print("➡️ [JAAKInstructionView] Next button tapped")
+        print("➡️ [JAAKInstructionView] Next button tapped - current step: \(currentStepIndex)")
         
-        // Complete current step's progress bar immediately
+        // Complete current step's progress bar IMMEDIATELY to 100%
         if currentStepIndex < segmentFills.count {
-            updateIndividualSegmentProgress(stepIndex: currentStepIndex, progress: 1.0)
+            print("📊 [JAAKInstructionView] Forcing completion of segment \(currentStepIndex)")
+            forceCompleteSegmentProgress(stepIndex: currentStepIndex)
+        } else {
+            print("⚠️ [JAAKInstructionView] Cannot complete segment - currentStepIndex (\(currentStepIndex)) >= segmentFills.count (\(segmentFills.count))")
         }
         
         // Stop timers and reset pause state
@@ -752,9 +755,9 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func moveToNextStep() {
-        // Complete current step's progress bar at 100% (only if not already done by nextButton)
+        // Complete current step's progress bar at 100% immediately
         if currentStepIndex < segmentFills.count {
-            updateIndividualSegmentProgress(stepIndex: currentStepIndex, progress: 1.0)
+            forceCompleteSegmentProgress(stepIndex: currentStepIndex)
         }
         
         currentStepIndex += 1
@@ -1052,6 +1055,33 @@ internal class JAAKInstructionView: UIView {
         // Force immediate layout update
         segment.setNeedsLayout()
         segment.layoutIfNeeded()
+    }
+    
+    private func forceCompleteSegmentProgress(stepIndex: Int) {
+        guard stepIndex < segmentFills.count && stepIndex < progressSegments.count else { return }
+        
+        let fill = segmentFills[stepIndex]
+        let segment = progressSegments[stepIndex]
+        
+        // Remove existing width constraints
+        fill.constraints.forEach { constraint in
+            if constraint.firstAttribute == .width {
+                constraint.isActive = false
+            }
+        }
+        
+        // Set to 100% width immediately
+        let widthConstraint = fill.widthAnchor.constraint(equalTo: segment.widthAnchor, multiplier: 1.0)
+        widthConstraint.isActive = true
+        
+        // Update segment background to active/completed state
+        segment.backgroundColor = UIColor.white.withAlphaComponent(0.3)
+        
+        // Force immediate layout update (no animation)
+        segment.setNeedsLayout()
+        segment.layoutIfNeeded()
+        
+        print("✅ [JAAKInstructionView] Segment \(stepIndex) forced to 100%")
     }
 }
 
