@@ -119,7 +119,7 @@ public class JAAKFaceDetectorSDK: NSObject {
     }
     
     /// Continue with detection start after permissions are confirmed
-    private func continueStartDetection() throws {
+    private func continueStartDetection(showInstructions: Bool = true) throws {
         // Setup camera only if not already set up
         guard let cameraManager = cameraManager else {
             throw JAAKFaceDetectorError(label: "Camera manager not initialized", code: "CAMERA_MANAGER_NIL")
@@ -149,8 +149,10 @@ public class JAAKFaceDetectorSDK: NSObject {
         // Start security monitoring
         securityMonitor?.startMonitoring()
         
-        // Show initial instructions
-        instructionController?.startInstructions()
+        // Show initial instructions if requested
+        if showInstructions {
+            instructionController?.startInstructions()
+        }
         
         // Auto recorder works automatically after recording completion
         
@@ -168,8 +170,24 @@ public class JAAKFaceDetectorSDK: NSObject {
     /// Restart face detection
     /// - Throws: JAAKFaceDetectorError if unable to restart
     public func restartDetection() throws {
-        stopDetection()
-        try startDetection()
+        // Check if instructions are currently showing to preserve state
+        let shouldShowInstructions = configuration.enableInstructions
+        
+        // Stop detection components but avoid hiding instructions to prevent flashing
+        cameraManager?.stopSession()
+        securityMonitor?.stopMonitoring()
+        updateStatus(.stopped)
+        
+        // Restart detection without showing instructions immediately
+        try continueStartDetection(showInstructions: false)
+        
+        // Show instructions with proper timing to avoid the flash
+        if shouldShowInstructions {
+            // Add small delay to ensure UI is ready and avoid rapid hide/show cycle
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.instructionController?.startInstructions()
+            }
+        }
     }
     
     /// Reset the detector
