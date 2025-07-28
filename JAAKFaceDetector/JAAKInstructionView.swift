@@ -85,8 +85,23 @@ internal class JAAKInstructionView: UIView {
     func showInstructions() {
         guard configuration.enableInstructions else { return }
         
+        // FIRST: Stop any running timers
+        stopCurrentTimer()
+        
+        // SECOND: Reset all progress state completely
         currentState = .showing
         currentStepIndex = 0
+        currentProgress = 0.0
+        targetProgress = 0.0
+        stepStartTime = nil
+        totalStepDuration = 0
+        isPaused = false
+        pauseButton.setTitle("Pausar", for: .normal)
+        
+        // THIRD: Force immediate visual reset of ALL progress bars to 0%
+        for i in 0..<segmentFills.count {
+            forceResetSegmentProgress(stepIndex: i)
+        }
         
         // Notify delegate that instructions are starting (to pause detection)
         delegate?.instructionView(self, willStartInstructions: true)
@@ -120,17 +135,22 @@ internal class JAAKInstructionView: UIView {
     /// Hide instructions
     func hideInstructions() {
         currentState = .hidden
+        
+        // Stop ALL timers immediately
         stopCurrentTimer()
         
-        // Reset all state
+        // Reset all state completely
+        currentStepIndex = 0
         isPaused = false
         pauseButton.setTitle("Pausar", for: .normal)
         currentProgress = 0.0
         targetProgress = 0.0
+        stepStartTime = nil
+        totalStepDuration = 0
         
-        // Reset all segments to 0 for next time
+        // Force reset all segments to 0 for next time
         for i in 0..<segmentFills.count {
-            updateIndividualSegmentProgress(stepIndex: i, progress: 0.0)
+            forceResetSegmentProgress(stepIndex: i)
         }
         
         UIView.animate(withDuration: 0.3) {
@@ -216,12 +236,17 @@ internal class JAAKInstructionView: UIView {
             segment.backgroundColor = UIColor.white.withAlphaComponent(0.2) // Inactive background
         }
         
-        // Apply new width constraint with animation
+        // Apply new width constraint
         let widthConstraint = fill.widthAnchor.constraint(equalTo: segment.widthAnchor, multiplier: fillWidth)
         widthConstraint.isActive = true
         
-        UIView.animate(withDuration: 0.05) {
+        // Force immediate layout update if resetting to 0
+        if fillWidth == 0 {
             segment.layoutIfNeeded()
+        } else {
+            UIView.animate(withDuration: 0.05) {
+                segment.layoutIfNeeded()
+            }
         }
     }
     
@@ -443,10 +468,18 @@ internal class JAAKInstructionView: UIView {
     
     @objc private func nextButtonTapped() {
         print("➡️ [JAAKInstructionView] Next button tapped")
-        // Skip to next step immediately
+        
+        // Complete current step's progress bar immediately
+        if currentStepIndex < segmentFills.count {
+            updateIndividualSegmentProgress(stepIndex: currentStepIndex, progress: 1.0)
+        }
+        
+        // Stop timers and reset pause state
         stopCurrentTimer()
         isPaused = false
         pauseButton.setTitle("Pausar", for: .normal)
+        
+        // Move to next step
         moveToNextStep()
     }
     
@@ -490,9 +523,16 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func stopCurrentTimer() {
+        // Stop step timer
         stepTimer?.invalidate()
         stepTimer = nil
+        
+        // Stop progress timer
         stopProgressTimer()
+        
+        // Reset timing state
+        stepStartTime = nil
+        totalStepDuration = 0
     }
     
     private func startProgressTimer() {
@@ -656,19 +696,22 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func startInstructionSequence() {
-        // Reset all progress tracking
+        // Double-check: Reset all progress tracking and bars
         currentStepIndex = 0
         currentProgress = 0.0
         targetProgress = 0.0
         stepStartTime = nil
         totalStepDuration = 0
         
-        // Reset ALL individual segments to 0%
+        // Force immediate visual reset of all segments
         for i in 0..<segmentFills.count {
-            updateIndividualSegmentProgress(stepIndex: i, progress: 0.0)
+            forceResetSegmentProgress(stepIndex: i)
         }
         
-        showCurrentStep()
+        // Force layout update
+        DispatchQueue.main.async {
+            self.showCurrentStep()
+        }
     }
     
     private func showCurrentStep() {
@@ -709,7 +752,7 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func moveToNextStep() {
-        // Complete current step's progress bar at 100%
+        // Complete current step's progress bar at 100% (only if not already done by nextButton)
         if currentStepIndex < segmentFills.count {
             updateIndividualSegmentProgress(stepIndex: currentStepIndex, progress: 1.0)
         }
@@ -982,6 +1025,33 @@ internal class JAAKInstructionView: UIView {
             sender.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
             sender.transform = .identity
         })
+    }
+    
+    private func forceResetSegmentProgress(stepIndex: Int) {
+        guard stepIndex < segmentFills.count && stepIndex < progressSegments.count else { return }
+        
+        let fill = segmentFills[stepIndex]
+        let segment = progressSegments[stepIndex]
+        
+        // Remove ALL existing width constraints immediately
+        fill.removeFromSuperview()
+        segment.addSubview(fill)
+        
+        // Set up fresh constraints for 0% progress
+        fill.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            fill.topAnchor.constraint(equalTo: segment.topAnchor),
+            fill.leadingAnchor.constraint(equalTo: segment.leadingAnchor),
+            fill.bottomAnchor.constraint(equalTo: segment.bottomAnchor),
+            fill.widthAnchor.constraint(equalTo: segment.widthAnchor, multiplier: 0) // 0% width
+        ])
+        
+        // Reset segment background to inactive state
+        segment.backgroundColor = UIColor.white.withAlphaComponent(0.2)
+        
+        // Force immediate layout update
+        segment.setNeedsLayout()
+        segment.layoutIfNeeded()
     }
 }
 
