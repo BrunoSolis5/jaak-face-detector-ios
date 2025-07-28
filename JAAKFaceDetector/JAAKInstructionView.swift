@@ -597,32 +597,36 @@ internal class JAAKInstructionView: UIView {
             backdropView.trailingAnchor.constraint(equalTo: trailingAnchor),
             backdropView.bottomAnchor.constraint(equalTo: bottomAnchor),
             
-            // Content - centered on full screen like webcomponent
+            // Content - let it size itself based on content
             contentView.centerXAnchor.constraint(equalTo: centerXAnchor),
             contentView.centerYAnchor.constraint(equalTo: centerYAnchor),
             contentView.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 20),
             contentView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20),
             
-            // Instruction title at top
-            instructionTitleLabel.topAnchor.constraint(equalTo: contentView.topAnchor),
+            // Create a vertical stack-like layout with the title at the center reference point
+            
+            // Animation container - positioned above the center (title will be below it)
+            animationContainerView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            animationContainerView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor, constant: -40), // Slightly above center
+            animationContainerView.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor),
+            animationContainerView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor),
+            animationContainerView.heightAnchor.constraint(equalToConstant: sizes.animationHeight),
+            
+            // Instruction title - positioned below animation container
+            instructionTitleLabel.topAnchor.constraint(equalTo: animationContainerView.bottomAnchor, constant: topMargin),
             instructionTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             instructionTitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
-            // Animation container between title and text (responsive height)
-            animationContainerView.topAnchor.constraint(equalTo: instructionTitleLabel.bottomAnchor, constant: topMargin),
-            animationContainerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            animationContainerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            animationContainerView.heightAnchor.constraint(equalToConstant: sizes.animationHeight),
-            
-            // Main instruction text (responsive margin)
-            instructionLabel.topAnchor.constraint(equalTo: animationContainerView.bottomAnchor, constant: topMargin),
+            // Main instruction text - positioned below title
+            instructionLabel.topAnchor.constraint(equalTo: instructionTitleLabel.bottomAnchor, constant: 15),
             instructionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             instructionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
-            // Instruction subtext
+            // Instruction subtext - positioned below main text
             instructionSubtextLabel.topAnchor.constraint(equalTo: instructionLabel.bottomAnchor, constant: 10),
             instructionSubtextLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             instructionSubtextLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            instructionSubtextLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor), // This closes the content view
             
             // Progress container at top (like webcomponent)
             progressContainerView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 40),
@@ -651,9 +655,6 @@ internal class JAAKInstructionView: UIView {
             nextButton.trailingAnchor.constraint(equalTo: buttonContainerView.trailingAnchor),
             nextButton.centerYAnchor.constraint(equalTo: buttonContainerView.centerYAnchor),
             nextButton.heightAnchor.constraint(equalToConstant: 36),
-            
-            // Content view bottom constraint (above buttons)
-            instructionSubtextLabel.bottomAnchor.constraint(lessThanOrEqualTo: buttonContainerView.topAnchor, constant: -30),
             
             // Help button (?) - positioned at top-left of the full screen
             helpButton.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 16),
