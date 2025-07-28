@@ -104,6 +104,7 @@ internal class JAAKInstructionView: UIView {
         totalStepDuration = 0
         isPaused = false
         pauseButton.setTitle("Pausar", for: .normal)
+        pauseButton.isEnabled = true // Re-enable pause button for new instructions
         
         // THIRD: Force immediate visual reset of ALL progress bars to 0%
         for i in 0..<segmentFills.count {
@@ -462,7 +463,14 @@ internal class JAAKInstructionView: UIView {
     // MARK: - Button Actions
     
     @objc private func pauseButtonTapped() {
-        print("🔘 [JAAKInstructionView] Pause button tapped - isPaused: \(isPaused)")
+        print("🔘 [JAAKInstructionView] Pause button tapped - isPaused: \(isPaused), currentStepIndex: \(currentStepIndex), totalSteps: \(instructionSteps.count)")
+        
+        // Safety check: Don't allow pause/resume if we're beyond the last step
+        guard currentStepIndex < instructionSteps.count else {
+            print("⚠️ [JAAKInstructionView] Cannot pause/resume - beyond last step")
+            return
+        }
+        
         isPaused.toggle()
         
         if isPaused {
@@ -499,7 +507,13 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func resumeCurrentStep() {
-        guard currentStepIndex < instructionSteps.count else { return }
+        guard currentStepIndex < instructionSteps.count else { 
+            print("❌ [JAAKInstructionView] Cannot resume - currentStepIndex (\(currentStepIndex)) >= instructionSteps.count (\(instructionSteps.count))")
+            // Reset pause state if we're beyond the last step
+            isPaused = false
+            pauseButton.setTitle("Pausar", for: .normal)
+            return 
+        }
         
         let step = instructionSteps[currentStepIndex]
         
@@ -508,6 +522,13 @@ internal class JAAKInstructionView: UIView {
         let remainingDuration = step.duration * (1.0 - Double(savedProgress))
         
         print("🔄 [JAAKInstructionView] Resuming step \(currentStepIndex) - saved progress: \(savedProgress), remaining duration: \(remainingDuration)")
+        
+        // Safety check for remaining duration
+        guard remainingDuration > 0 else {
+            print("⚠️ [JAAKInstructionView] No remaining time - moving to next step immediately")
+            moveToNextStep()
+            return
+        }
         
         // IMPORTANT: Calculate the elapsed time that should have passed to achieve savedProgress
         // Then set stepStartTime as if the timer started that much time ago
@@ -812,6 +833,13 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func completeInstructions() {
+        print("✅ [JAAKInstructionView] Completing all instructions")
+        
+        // Disable pause button to prevent interaction
+        pauseButton.isEnabled = false
+        isPaused = false
+        pauseButton.setTitle("Pausar", for: .normal)
+        
         currentState = .hidden
         delegate?.instructionView(self, didComplete: true)
         
