@@ -290,6 +290,9 @@ internal class JAAKInstructionView: UIView {
     // MARK: - Private Methods
     
     private func setupUI() {
+        // Get responsive sizes
+        let sizes = getResponsiveSizes()
+        
         // Backdrop - full screen dark overlay (matching webcomponent: rgba(0, 0, 0, 0.85))
         backdropView.backgroundColor = UIColor.black.withAlphaComponent(0.85)
         addSubview(backdropView)
@@ -300,22 +303,22 @@ internal class JAAKInstructionView: UIView {
         contentView.backgroundColor = .clear
         addSubview(contentView)
         
-        // Instruction title (h2 equivalent)
-        instructionTitleLabel.font = UIFont.systemFont(ofSize: 24, weight: .bold)
+        // Instruction title (h2 equivalent) - responsive font size
+        instructionTitleLabel.font = UIFont.systemFont(ofSize: sizes.titleFontSize, weight: .bold)
         instructionTitleLabel.textColor = .white
         instructionTitleLabel.textAlignment = .center
         instructionTitleLabel.numberOfLines = 0
         contentView.addSubview(instructionTitleLabel)
         
-        // Main instruction text
-        instructionLabel.font = UIFont.systemFont(ofSize: 18, weight: .semibold)
+        // Main instruction text - responsive font size
+        instructionLabel.font = UIFont.systemFont(ofSize: sizes.fontSize, weight: .semibold)
         instructionLabel.textColor = .white
         instructionLabel.textAlignment = .center
         instructionLabel.numberOfLines = 0
         contentView.addSubview(instructionLabel)
         
-        // Instruction subtext
-        instructionSubtextLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        // Instruction subtext - responsive font size (slightly smaller than main text)
+        instructionSubtextLabel.font = UIFont.systemFont(ofSize: sizes.fontSize - 2, weight: .medium)
         instructionSubtextLabel.textColor = UIColor.white.withAlphaComponent(0.7)
         instructionSubtextLabel.textAlignment = .center
         instructionSubtextLabel.numberOfLines = 0
@@ -569,6 +572,10 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func setupLayout() {
+        // Get responsive sizes
+        let sizes = getResponsiveSizes()
+        let topMargin: CGFloat = sizes.animationHeight >= 85 ? 30 : 20 // Reduce margins on smaller screens
+        
         backdropView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
         instructionTitleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -601,14 +608,14 @@ internal class JAAKInstructionView: UIView {
             instructionTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             instructionTitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
-            // Animation container between title and text (like webcomponent)
-            animationContainerView.topAnchor.constraint(equalTo: instructionTitleLabel.bottomAnchor, constant: 30),
+            // Animation container between title and text (responsive height)
+            animationContainerView.topAnchor.constraint(equalTo: instructionTitleLabel.bottomAnchor, constant: topMargin),
             animationContainerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             animationContainerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            animationContainerView.heightAnchor.constraint(equalToConstant: 100),
+            animationContainerView.heightAnchor.constraint(equalToConstant: sizes.animationHeight),
             
-            // Main instruction text
-            instructionLabel.topAnchor.constraint(equalTo: animationContainerView.bottomAnchor, constant: 30),
+            // Main instruction text (responsive margin)
+            instructionLabel.topAnchor.constraint(equalTo: animationContainerView.bottomAnchor, constant: topMargin),
             instructionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             instructionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
@@ -829,19 +836,22 @@ internal class JAAKInstructionView: UIView {
         let containerView = UIView()
         containerView.backgroundColor = .clear
         
-        // Load PNG icon as UIImageView - size 100x100 like webcomponent
+        // Get responsive size
+        let sizes = getResponsiveSizes()
+        
+        // Load PNG icon as UIImageView - responsive size
         if let iconImage = loadIconImage(named: "icon-center-face-dark") {
             let imageView = UIImageView(image: iconImage)
             imageView.contentMode = .scaleAspectFit
             imageView.translatesAutoresizingMaskIntoConstraints = false
             containerView.addSubview(imageView)
             
-            // Center the icon perfectly using Auto Layout (matching webcomponent flexbox center)
+            // Center the icon perfectly using Auto Layout with responsive size
             NSLayoutConstraint.activate([
                 imageView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
                 imageView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-                imageView.widthAnchor.constraint(equalToConstant: 100),
-                imageView.heightAnchor.constraint(equalToConstant: 100)
+                imageView.widthAnchor.constraint(equalToConstant: sizes.centerIcon),
+                imageView.heightAnchor.constraint(equalToConstant: sizes.centerIcon)
             ])
         }
         
@@ -853,10 +863,14 @@ internal class JAAKInstructionView: UIView {
         let containerView = UIView()
         containerView.backgroundColor = .clear
         
+        // Get responsive sizes
+        let sizes = getResponsiveSizes()
+        let spacing: CGFloat = sizes.accessoryIcon >= 65 ? 30 : 20 // Reduce spacing on smaller screens
+        
         // Create horizontal stack view to center the icons (like webcomponent flexbox)
         let stackView = UIStackView()
         stackView.axis = .horizontal
-        stackView.spacing = 30 // 30pt gap like webcomponent
+        stackView.spacing = spacing
         stackView.alignment = .center
         stackView.distribution = .equalSpacing
         stackView.translatesAutoresizingMaskIntoConstraints = false
@@ -868,40 +882,38 @@ internal class JAAKInstructionView: UIView {
             stackView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor)
         ])
         
-        let iconSize: CGFloat = 80 // 80x80 like webcomponent
-        
-        // Cap icon (PNG) - 80x80
+        // Cap icon (PNG) - responsive size
         if let capImage = loadIconImage(named: "icon-cap-dark") {
             let capImageView = UIImageView(image: capImage)
             capImageView.contentMode = .scaleAspectFit
             capImageView.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
-                capImageView.widthAnchor.constraint(equalToConstant: iconSize),
-                capImageView.heightAnchor.constraint(equalToConstant: iconSize)
+                capImageView.widthAnchor.constraint(equalToConstant: sizes.accessoryIcon),
+                capImageView.heightAnchor.constraint(equalToConstant: sizes.accessoryIcon)
             ])
             stackView.addArrangedSubview(capImageView)
         }
         
-        // Glasses icon (PNG) - 80x80
+        // Glasses icon (PNG) - responsive size
         if let glassesImage = loadIconImage(named: "icon-glasses-dark") {
             let glassesImageView = UIImageView(image: glassesImage)
             glassesImageView.contentMode = .scaleAspectFit
             glassesImageView.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
-                glassesImageView.widthAnchor.constraint(equalToConstant: iconSize),
-                glassesImageView.heightAnchor.constraint(equalToConstant: iconSize)
+                glassesImageView.widthAnchor.constraint(equalToConstant: sizes.accessoryIcon),
+                glassesImageView.heightAnchor.constraint(equalToConstant: sizes.accessoryIcon)
             ])
             stackView.addArrangedSubview(glassesImageView)
         }
         
-        // Headphones icon (PNG) - 80x80
+        // Headphones icon (PNG) - responsive size
         if let headphonesImage = loadIconImage(named: "icon-headphones-dark") {
             let headphonesImageView = UIImageView(image: headphonesImage)
             headphonesImageView.contentMode = .scaleAspectFit
             headphonesImageView.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
-                headphonesImageView.widthAnchor.constraint(equalToConstant: iconSize),
-                headphonesImageView.heightAnchor.constraint(equalToConstant: iconSize)
+                headphonesImageView.widthAnchor.constraint(equalToConstant: sizes.accessoryIcon),
+                headphonesImageView.heightAnchor.constraint(equalToConstant: sizes.accessoryIcon)
             ])
             stackView.addArrangedSubview(headphonesImageView)
         }
@@ -1010,6 +1022,43 @@ internal class JAAKInstructionView: UIView {
     }
     
     // MARK: - Helper Functions
+    
+    /// Get responsive sizes based on screen size (matching webcomponent behavior)
+    private func getResponsiveSizes() -> (centerIcon: CGFloat, accessoryIcon: CGFloat, fontSize: CGFloat, titleFontSize: CGFloat, animationHeight: CGFloat) {
+        let screenWidth = UIScreen.main.bounds.width
+        let screenHeight = UIScreen.main.bounds.height
+        
+        // iPhone (small screens)
+        if screenWidth <= 390 || screenHeight <= 667 {
+            return (
+                centerIcon: 60,        // 60x60 for center icon
+                accessoryIcon: 50,     // 50x50 for accessory icons
+                fontSize: 16,          // Smaller text
+                titleFontSize: 20,     // Smaller title
+                animationHeight: 70    // Reduced animation container
+            )
+        }
+        // iPad (large screens)
+        else if screenWidth >= 768 {
+            return (
+                centerIcon: 100,       // 100x100 for center icon (webcomponent desktop)
+                accessoryIcon: 80,     // 80x80 for accessory icons
+                fontSize: 20,          // Larger text
+                titleFontSize: 24,     // Standard title
+                animationHeight: 100   // Full animation container
+            )
+        }
+        // iPhone Plus/Max (medium screens)  
+        else {
+            return (
+                centerIcon: 80,        // 80x80 for center icon
+                accessoryIcon: 65,     // 65x65 for accessory icons
+                fontSize: 18,          // Medium text
+                titleFontSize: 22,     // Medium title
+                animationHeight: 85    // Medium animation container
+            )
+        }
+    }
     
     private func forceResetSegmentProgress(stepIndex: Int) {
         guard stepIndex < segmentFills.count && stepIndex < progressSegments.count else { return }
