@@ -66,6 +66,7 @@ internal class JAAKInstructionView: UIView {
     private var targetProgress: Float = 0.0
     private var stepStartTime: Date?
     private var totalStepDuration: TimeInterval = 0
+    private var currentSegmentProgress: Float = 0.0 // Track current segment progress
     
     weak var delegate: JAAKInstructionViewDelegate?
     
@@ -461,14 +462,16 @@ internal class JAAKInstructionView: UIView {
     // MARK: - Button Actions
     
     @objc private func pauseButtonTapped() {
-        print("🔘 [JAAKInstructionView] Pause button tapped")
+        print("🔘 [JAAKInstructionView] Pause button tapped - isPaused: \(isPaused)")
         isPaused.toggle()
         
         if isPaused {
+            print("⏸️ [JAAKInstructionView] Pausing - current progress: \(currentSegmentProgress)")
             // Pause both timers
             stopCurrentTimer()
             pauseButton.setTitle("Continuar", for: .normal)
         } else {
+            print("▶️ [JAAKInstructionView] Resuming - stored progress: \(currentSegmentProgress)")
             // Resume both timers
             resumeCurrentStep()
             pauseButton.setTitle("Pausar", for: .normal)
@@ -500,38 +503,39 @@ internal class JAAKInstructionView: UIView {
         
         let step = instructionSteps[currentStepIndex]
         
-        // Get current progress of the individual segment
-        let currentSegmentProgress = getCurrentSegmentProgress()
-        let remainingDuration = step.duration * (1.0 - Double(currentSegmentProgress))
+        // Get current progress of the individual segment (this should be preserved from pause)
+        let savedProgress = getCurrentSegmentProgress()
+        let remainingDuration = step.duration * (1.0 - Double(savedProgress))
         
-        // Reset start time for continuous progress calculation
-        let elapsedTime = step.duration - remainingDuration
+        print("🔄 [JAAKInstructionView] Resuming step \(currentStepIndex) - saved progress: \(savedProgress), remaining duration: \(remainingDuration)")
+        
+        // IMPORTANT: Calculate the elapsed time that should have passed to achieve savedProgress
+        // Then set stepStartTime as if the timer started that much time ago
+        let elapsedTime = step.duration * Double(savedProgress)
         stepStartTime = Date().addingTimeInterval(-elapsedTime)
         
-        // Resume both timers
+        // Ensure totalStepDuration is set correctly
+        totalStepDuration = step.duration
+        
+        print("🕐 [JAAKInstructionView] Time calculation - elapsed: \(elapsedTime)s, stepStartTime offset: \(-elapsedTime)s")
+        
+        // Resume progress timer first
         startProgressTimer()
         
+        // Then resume step timer for remaining duration
         stepTimer = Timer.scheduledTimer(withTimeInterval: remainingDuration, repeats: false) { [weak self] _ in
+            print("🔚 [JAAKInstructionView] Step timer completed after resume")
             self?.stopProgressTimer()
             self?.moveToNextStep()
         }
+        
+        print("✅ [JAAKInstructionView] Timers resumed - progress timer: \(progressTimer != nil), step timer: \(stepTimer != nil)")
+        print("📊 [JAAKInstructionView] Expected progress after resume: \(savedProgress)")
     }
     
     private func getCurrentSegmentProgress() -> Float {
-        // Get the current fill width of the active segment
-        guard currentStepIndex < segmentFills.count else { return 0.0 }
-        
-        let fill = segmentFills[currentStepIndex]
-        let segment = progressSegments[currentStepIndex]
-        
-        // Find the width constraint to get current progress
-        for constraint in fill.constraints {
-            if constraint.firstAttribute == .width && constraint.secondItem === segment {
-                return Float(constraint.multiplier)
-            }
-        }
-        
-        return 0.0
+        // Return the tracked current segment progress
+        return currentSegmentProgress
     }
     
     private func stopCurrentTimer() {
@@ -542,9 +546,11 @@ internal class JAAKInstructionView: UIView {
         // Stop progress timer
         stopProgressTimer()
         
-        // Reset timing state
+        // Reset timing state but PRESERVE currentSegmentProgress for pause/resume
         stepStartTime = nil
         totalStepDuration = 0
+        // DON'T reset currentSegmentProgress here - it's needed for resume
+        print("⏹️ [JAAKInstructionView] Timers stopped - preserving progress: \(currentSegmentProgress)")
     }
     
     private func startProgressTimer() {
@@ -562,10 +568,26 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func updateContinuousProgress() {
-        guard let startTime = stepStartTime, !isPaused else { return }
+        guard let startTime = stepStartTime, !isPaused else { 
+            if stepStartTime == nil {
+                print("⚠️ [JAAKInstructionView] updateContinuousProgress called but stepStartTime is nil")
+            }
+            if isPaused {
+                print("⚠️ [JAAKInstructionView] updateContinuousProgress called but isPaused is true")
+            }
+            return 
+        }
         
         let elapsedTime = Date().timeIntervalSince(startTime)
         let progressRatio = min(elapsedTime / totalStepDuration, 1.0)
+        
+        // Track current segment progress
+        currentSegmentProgress = Float(progressRatio)
+        
+        // Debug log every 20 calls (once per second at 20fps)
+        if Int(elapsedTime * 20) % 20 == 0 {
+            print("📊 [JAAKInstructionView] Progress update - elapsed: \(elapsedTime)s, ratio: \(progressRatio), segment: \(currentSegmentProgress)")
+        }
         
         // Update individual segment progress (0 to 1 for current step)
         updateIndividualSegmentProgress(stepIndex: currentStepIndex, progress: Float(progressRatio))
@@ -758,6 +780,7 @@ internal class JAAKInstructionView: UIView {
         targetProgress = Float(currentStepIndex + 1) / Float(instructionSteps.count)
         totalStepDuration = step.duration
         stepStartTime = Date()
+        currentSegmentProgress = 0.0 // Reset segment progress for new step
         
         // Start continuous progress updates (only if not paused)
         if !isPaused {
