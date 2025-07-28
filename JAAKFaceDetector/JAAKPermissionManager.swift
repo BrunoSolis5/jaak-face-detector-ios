@@ -66,7 +66,7 @@ internal class JAAKPermissionManager {
         requestCameraPermission { cameraGranted in
             guard cameraGranted else {
                 let error = JAAKFaceDetectorError(
-                    label: "Camera permission denied",
+                    label: "Permiso de cámara denegado",
                     code: "CAMERA_PERMISSION_DENIED"
                 )
                 completion(false, error)
@@ -79,7 +79,7 @@ internal class JAAKPermissionManager {
                         completion(true, nil)
                     } else {
                         let error = JAAKFaceDetectorError(
-                            label: "Microphone permission denied",
+                            label: "Permiso de micrófono denegado",
                             code: "MICROPHONE_PERMISSION_DENIED"
                         )
                         completion(false, error)
@@ -95,18 +95,18 @@ internal class JAAKPermissionManager {
     /// - Parameter from: the view controller to present from
     static func showPermissionAlert(from viewController: UIViewController?) {
         let alert = UIAlertController(
-            title: "Camera Access Required",
-            message: "This app needs camera access to detect faces. Please enable camera access in Settings.",
+            title: "Acceso a la cámara requerido",
+            message: "Esta aplicación necesita acceso a la cámara para detectar rostros. Por favor, habilita el acceso a la cámara en Configuración.",
             preferredStyle: .alert
         )
         
-        alert.addAction(UIAlertAction(title: "Settings", style: .default) { _ in
+        alert.addAction(UIAlertAction(title: "Configuración", style: .default) { _ in
             if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
                 UIApplication.shared.open(settingsUrl)
             }
         })
         
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Cancelar", style: .cancel))
         
         viewController?.present(alert, animated: true)
     }

@@ -78,7 +78,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
             
         } catch {
             let detectorError = JAAKFaceDetectorError(
-                label: "MediaPipe face detection failed",
+                label: "Falló la detección facial MediaPipe",
                 code: "MEDIAPIPE_DETECTION_FAILED",
                 details: error
             )
@@ -117,7 +117,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
         
         guard let finalPath = modelPath else {
             throw JAAKFaceDetectorError(
-                label: "MediaPipe BlazeFace model not found in any expected location",
+                label: "Modelo MediaPipe BlazeFace no encontrado en ninguna ubicación esperada",
                 code: "MEDIAPIPE_MODEL_NOT_FOUND"
             )
         }
@@ -138,7 +138,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
             
         } catch {
             throw JAAKFaceDetectorError(
-                label: "Failed to initialize MediaPipe FaceDetector",
+                label: "Error al inicializar MediaPipe FaceDetector",
                 code: "MEDIAPIPE_INIT_FAILED",
                 details: error
             )
@@ -193,7 +193,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
         let (isValidPosition, instructionMessage) = validateFacePositionWithInstructions(primaryFace)
         
         let message = JAAKFaceDetectionMessage(
-            label: isValidPosition ? "Perfect! Ready to record" : instructionMessage,
+            label: isValidPosition ? "¡Perfecto! Listo para grabar" : instructionMessage,
             details: "Face confidence: \(confidence)",
             faceExists: true,
             correctPosition: isValidPosition
@@ -220,7 +220,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
         consecutiveNoFaceFrames += 1
         
         let message = JAAKFaceDetectionMessage(
-            label: "Point your face towards the camera",
+            label: "Dirige tu rostro hacia la cámara",
             details: "Consecutive no-face frames: \(consecutiveNoFaceFrames)",
             faceExists: false,
             correctPosition: false
@@ -297,7 +297,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
         // Validate basic bounds
         guard boundingBox.width > 0 && boundingBox.height > 0 &&
               boundingBox.origin.x >= 0 && boundingBox.origin.y >= 0 else {
-            return (false, "Face detection error - please try again")
+            return (false, "Error de detección facial - por favor inténtalo de nuevo")
         }
         
         if isNormalized {
@@ -310,35 +310,35 @@ internal class JAAKFaceDetectionEngine: NSObject {
             
             // Check face size
             if faceArea < 0.08 {  // Too small (less than 8% of frame)
-                return (false, "Move closer to the camera")
+                return (false, "Acuércate más a la cámara")
             } else if faceArea > 0.45 {  // Too large (more than 45% of frame)
-                return (false, "Move away from the camera")
+                return (false, "Aléjate de la cámara")
             }
             
             // Check horizontal position
             if centerX < 0.3 {
-                return (false, "Move to the right")
+                return (false, "Muévete hacia la derecha")
             } else if centerX > 0.7 {
-                return (false, "Move to the left")
+                return (false, "Muévete hacia la izquierda")
             }
             
             // Check vertical position
             if centerY < 0.25 {
-                return (false, "Move down a bit")
+                return (false, "Baja un poco")
             } else if centerY > 0.75 {
-                return (false, "Move up a bit")
+                return (false, "Sube un poco")
             }
             
             // Check if face is too wide or too tall (aspect ratio)
             let aspectRatio = faceWidth / faceHeight
             if aspectRatio < 0.6 {
-                return (false, "Turn your face towards the camera")
+                return (false, "Gira tu cara hacia la cámara")
             } else if aspectRatio > 1.4 {
-                return (false, "Face your camera directly")
+                return (false, "Mira directamente a la cámara")
             }
             
             // If all checks pass, face is in good position
-            return (true, "Perfect position!")
+            return (true, "¡Posición perfecta!")
             
         } else {
             // Handle pixel coordinates - convert to relative checks
@@ -351,25 +351,25 @@ internal class JAAKFaceDetectionEngine: NSObject {
             
             // Check face size
             if relativeArea < 0.08 {
-                return (false, "Move closer to the camera")
+                return (false, "Acuércate más a la cámara")
             } else if relativeArea > 0.45 {
-                return (false, "Move away from the camera")
+                return (false, "Aléjate de la cámara")
             }
             
             // Check position (similar to normalized logic)
             if relativeCenterX < 0.3 {
-                return (false, "Move to the right")
+                return (false, "Muévete hacia la derecha")
             } else if relativeCenterX > 0.7 {
-                return (false, "Move to the left")
+                return (false, "Muévete hacia la izquierda")
             }
             
             if relativeCenterY < 0.25 {
-                return (false, "Move down a bit")
+                return (false, "Baja un poco")
             } else if relativeCenterY > 0.75 {
-                return (false, "Move up a bit")
+                return (false, "Sube un poco")
             }
             
-            return (true, "Perfect position!")
+            return (true, "¡Posición perfecta!")
         }
     }
     
@@ -479,7 +479,7 @@ extension JAAKFaceDetectionEngine: FaceDetectorLiveStreamDelegate {
         if let error = error {
             print("❌ [FaceDetectionEngine] Live stream error: \(error)")
             let detectorError = JAAKFaceDetectorError(
-                label: "MediaPipe live stream detection failed",
+                label: "Error en la detección de flujo en vivo MediaPipe",
                 code: "MEDIAPIPE_LIVE_STREAM_FAILED",
                 details: error
             )

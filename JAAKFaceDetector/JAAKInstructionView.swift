@@ -197,8 +197,9 @@ internal class JAAKInstructionView: UIView {
         instructionLabel.numberOfLines = 0
         contentView.addSubview(instructionLabel)
         
-        // Animation container
+        // Animation container - hidden in text-only mode
         animationContainerView.backgroundColor = .clear
+        animationContainerView.isHidden = true
         contentView.addSubview(animationContainerView)
         
         // Progress view
@@ -262,8 +263,8 @@ internal class JAAKInstructionView: UIView {
             backgroundView.centerYAnchor.constraint(equalTo: centerYAnchor),
             backgroundView.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 32),
             backgroundView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -32),
-            backgroundView.heightAnchor.constraint(lessThanOrEqualToConstant: 150),
-            backgroundView.heightAnchor.constraint(greaterThanOrEqualToConstant: 120),
+            backgroundView.heightAnchor.constraint(lessThanOrEqualToConstant: 100),
+            backgroundView.heightAnchor.constraint(greaterThanOrEqualToConstant: 80),
             
             // Content - positioned relative to background with generous padding
             contentView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 20),
@@ -271,14 +272,14 @@ internal class JAAKInstructionView: UIView {
             contentView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -24),
             contentView.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -20),
             
-            // Animation container
+            // Animation container - hidden
             animationContainerView.topAnchor.constraint(equalTo: contentView.topAnchor),
             animationContainerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             animationContainerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            animationContainerView.heightAnchor.constraint(equalToConstant: 60),
+            animationContainerView.heightAnchor.constraint(equalToConstant: 0),
             
-            // Instruction label
-            instructionLabel.topAnchor.constraint(equalTo: animationContainerView.bottomAnchor, constant: 8),
+            // Instruction label - now at top
+            instructionLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
             instructionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             instructionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
@@ -322,20 +323,15 @@ internal class JAAKInstructionView: UIView {
     
     private func getDefaultInstructions() -> [String] {
         return [
-            "Remove glasses for better detection",
-            "Remove hat or cap",
-            "Remove headphones or earbuds", 
-            "Ensure good lighting on your face"
+            "Quítate las gafas para una mejor detección",
+            "Quítate el sombrero o gorra",
+            "Quítate los auriculares", 
+            "Asegúrate de tener buena iluminación en tu rostro"
         ]
     }
     
     private func getDefaultAnimations() -> [String] {
-        return [
-            "https://raw.githubusercontent.com/jaak-ai/jaak-storage/main/animations/rive/glasses.riv",
-            "https://raw.githubusercontent.com/jaak-ai/jaak-storage/main/animations/rive/hat.riv",
-            "https://raw.githubusercontent.com/jaak-ai/jaak-storage/main/animations/rive/headphones.riv",
-            "https://raw.githubusercontent.com/jaak-ai/jaak-storage/main/animations/rive/light.riv"
-        ]
+        return []
     }
     
     private func startInstructionSequence() {
@@ -359,10 +355,7 @@ internal class JAAKInstructionView: UIView {
         let progress = Float(currentStepIndex + 1) / Float(instructionSteps.count)
         updateProgress(progress)
         
-        // Show animation if available
-        if let animationName = step.animation {
-            showAnimation(animationName)
-        }
+        // Skip animations - show text only
         
         // Start timer for next step
         stepTimer = Timer.scheduledTimer(withTimeInterval: step.duration, repeats: false) { [weak self] _ in
@@ -392,25 +385,8 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func showAnimation(_ animationName: String) {
-        // Remove previous animation
-        currentAnimationView?.removeFromSuperview()
-        
-        // Create animation view based on name
-        let animationView = createAnimationView(for: animationName)
-        animationContainerView.addSubview(animationView)
-        currentAnimationView = animationView
-        
-        // Layout animation view
-        animationView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            animationView.centerXAnchor.constraint(equalTo: animationContainerView.centerXAnchor),
-            animationView.centerYAnchor.constraint(equalTo: animationContainerView.centerYAnchor),
-            animationView.widthAnchor.constraint(equalToConstant: 80),
-            animationView.heightAnchor.constraint(equalToConstant: 80)
-        ])
-        
-        // Start animation
-        startAnimation(animationView, for: animationName)
+        // Skip animations - text only mode
+        return
     }
     
     private func createAnimationView(for animationName: String) -> UIView {

@@ -29,7 +29,7 @@ internal class JAAKVideoRecorder: NSObject {
     func startRecording(with cameraManager: JAAKCameraManager, completion: @escaping (Result<JAAKFileResult, JAAKFaceDetectorError>) -> Void) {
         guard !isCurrentlyRecording else {
             let error = JAAKFaceDetectorError(
-                label: "Recording already in progress",
+                label: "Grabación ya en progreso",
                 code: "RECORDING_IN_PROGRESS"
             )
             completion(.failure(error))
@@ -151,7 +151,7 @@ internal class JAAKVideoRecorder: NSObject {
             
         } catch {
             let detectorError = JAAKFaceDetectorError(
-                label: "Failed to process recorded video",
+                label: "Error al procesar video grabado",
                 code: "VIDEO_PROCESSING_FAILED",
                 details: error
             )

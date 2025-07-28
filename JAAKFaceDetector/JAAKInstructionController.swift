@@ -47,7 +47,7 @@ internal class JAAKInstructionController {
         // Only show instructions for critical states, not for normal operation
         switch status {
         case .error:
-            showInstructionForTrigger(.error("An error occurred"))
+            showInstructionForTrigger(.error("Ocurrió un error"))
             
         default:
             // Don't show instructions for normal state changes like .recording or .finished
