@@ -828,14 +828,21 @@ internal class JAAKInstructionView: UIView {
     private func createCenterFaceIcon() -> UIView {
         let containerView = UIView()
         containerView.backgroundColor = .clear
-        containerView.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
         
-        // Load PNG icon as UIImageView
+        // Load PNG icon as UIImageView - size 100x100 like webcomponent
         if let iconImage = loadIconImage(named: "icon-center-face-dark") {
             let imageView = UIImageView(image: iconImage)
             imageView.contentMode = .scaleAspectFit
-            imageView.frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+            imageView.translatesAutoresizingMaskIntoConstraints = false
             containerView.addSubview(imageView)
+            
+            // Center the icon perfectly using Auto Layout (matching webcomponent flexbox center)
+            NSLayoutConstraint.activate([
+                imageView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+                imageView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
+                imageView.widthAnchor.constraint(equalToConstant: 100),
+                imageView.heightAnchor.constraint(equalToConstant: 100)
+            ])
         }
         
         return containerView
@@ -846,32 +853,57 @@ internal class JAAKInstructionView: UIView {
         let containerView = UIView()
         containerView.backgroundColor = .clear
         
-        // Create three accessory icons side by side (matching webcomponent)
-        let iconSize: CGFloat = 60
-        let spacing: CGFloat = 15
+        // Create horizontal stack view to center the icons (like webcomponent flexbox)
+        let stackView = UIStackView()
+        stackView.axis = .horizontal
+        stackView.spacing = 30 // 30pt gap like webcomponent
+        stackView.alignment = .center
+        stackView.distribution = .equalSpacing
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(stackView)
         
-        // Cap icon (PNG)
+        // Center the stack view in the container
+        NSLayoutConstraint.activate([
+            stackView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+            stackView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor)
+        ])
+        
+        let iconSize: CGFloat = 80 // 80x80 like webcomponent
+        
+        // Cap icon (PNG) - 80x80
         if let capImage = loadIconImage(named: "icon-cap-dark") {
             let capImageView = UIImageView(image: capImage)
             capImageView.contentMode = .scaleAspectFit
-            capImageView.frame = CGRect(x: 0, y: 10, width: iconSize, height: iconSize)
-            containerView.addSubview(capImageView)
+            capImageView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                capImageView.widthAnchor.constraint(equalToConstant: iconSize),
+                capImageView.heightAnchor.constraint(equalToConstant: iconSize)
+            ])
+            stackView.addArrangedSubview(capImageView)
         }
         
-        // Glasses icon (PNG)
+        // Glasses icon (PNG) - 80x80
         if let glassesImage = loadIconImage(named: "icon-glasses-dark") {
             let glassesImageView = UIImageView(image: glassesImage)
             glassesImageView.contentMode = .scaleAspectFit
-            glassesImageView.frame = CGRect(x: iconSize + spacing, y: 10, width: iconSize, height: iconSize)
-            containerView.addSubview(glassesImageView)
+            glassesImageView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                glassesImageView.widthAnchor.constraint(equalToConstant: iconSize),
+                glassesImageView.heightAnchor.constraint(equalToConstant: iconSize)
+            ])
+            stackView.addArrangedSubview(glassesImageView)
         }
         
-        // Headphones icon (PNG)
+        // Headphones icon (PNG) - 80x80
         if let headphonesImage = loadIconImage(named: "icon-headphones-dark") {
             let headphonesImageView = UIImageView(image: headphonesImage)
             headphonesImageView.contentMode = .scaleAspectFit
-            headphonesImageView.frame = CGRect(x: (iconSize + spacing) * 2, y: 10, width: iconSize, height: iconSize)
-            containerView.addSubview(headphonesImageView)
+            headphonesImageView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                headphonesImageView.widthAnchor.constraint(equalToConstant: iconSize),
+                headphonesImageView.heightAnchor.constraint(equalToConstant: iconSize)
+            ])
+            stackView.addArrangedSubview(headphonesImageView)
         }
         
         return containerView
@@ -879,15 +911,29 @@ internal class JAAKInstructionView: UIView {
     
     
     private func addPulseAnimation(to view: UIView) {
-        let pulseAnimation = CABasicAnimation(keyPath: "transform.scale")
-        pulseAnimation.duration = 2.0 // Match webcomponent (2s ease-in-out infinite)
-        pulseAnimation.fromValue = 1.0
-        pulseAnimation.toValue = 1.05 // Smaller pulse like webcomponent
-        pulseAnimation.autoreverses = true
-        pulseAnimation.repeatCount = .infinity
-        pulseAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        // Match webcomponent pulse animation exactly:
+        // 0%: scale(1) opacity(0.8)
+        // 50%: scale(1.05) opacity(1)
+        // 100%: scale(1) opacity(0.8)
         
-        view.layer.add(pulseAnimation, forKey: "pulse")
+        let scaleAnimation = CABasicAnimation(keyPath: "transform.scale")
+        scaleAnimation.duration = 2.0
+        scaleAnimation.fromValue = 1.0
+        scaleAnimation.toValue = 1.05
+        scaleAnimation.autoreverses = true
+        scaleAnimation.repeatCount = .infinity
+        scaleAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        
+        let opacityAnimation = CABasicAnimation(keyPath: "opacity")
+        opacityAnimation.duration = 2.0
+        opacityAnimation.fromValue = 0.8
+        opacityAnimation.toValue = 1.0
+        opacityAnimation.autoreverses = true
+        opacityAnimation.repeatCount = .infinity
+        opacityAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        
+        view.layer.add(scaleAnimation, forKey: "pulseScale")
+        view.layer.add(opacityAnimation, forKey: "pulseOpacity")
     }
     
     private func loadIconImage(named: String) -> UIImage? {
