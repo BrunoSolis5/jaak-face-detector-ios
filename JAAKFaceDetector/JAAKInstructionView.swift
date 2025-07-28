@@ -35,7 +35,9 @@ internal class JAAKInstructionView: UIView {
     private let backdropView = UIView()
     private let backgroundView = UIView()
     private let contentView = UIView()
+    private let instructionTitleLabel = UILabel()
     private let instructionLabel = UILabel()
+    private let instructionSubtextLabel = UILabel()
     private let animationContainerView = UIView()
     private let progressView = UIProgressView(progressViewStyle: .default)
     private let helpButton = UIButton()
@@ -79,18 +81,13 @@ internal class JAAKInstructionView: UIView {
         backdropView.isHidden = false
         backdropView.alpha = 0.0
         
-        backgroundView.isHidden = false
-        backgroundView.alpha = 0.0
-        backgroundView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
-        
         contentView.isHidden = false
         contentView.alpha = 0.0
-        contentView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+        contentView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
         
-        UIView.animate(withDuration: 0.4, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: [], animations: {
+        // Fade in animation like webcomponent
+        UIView.animate(withDuration: 0.5, delay: 0, options: [.curveEaseOut], animations: {
             self.backdropView.alpha = 1.0
-            self.backgroundView.alpha = 1.0
-            self.backgroundView.transform = .identity
             self.contentView.alpha = 1.0
             self.contentView.transform = .identity
         }) { _ in
@@ -105,13 +102,9 @@ internal class JAAKInstructionView: UIView {
         
         UIView.animate(withDuration: 0.3) {
             self.backdropView.alpha = 0.0
-            self.backgroundView.alpha = 0.0
-            self.backgroundView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
             self.contentView.alpha = 0.0
-            self.contentView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
         } completion: { _ in
             self.backdropView.isHidden = true
-            self.backgroundView.isHidden = true
             self.contentView.isHidden = true
             self.delegate?.instructionView(self, didComplete: false)
             
@@ -177,25 +170,36 @@ internal class JAAKInstructionView: UIView {
     // MARK: - Private Methods
     
     private func setupUI() {
-        // Backdrop - full screen dark overlay
-        backdropView.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        // Backdrop - full screen dark overlay (matching webcomponent: rgba(0, 0, 0, 0.85))
+        backdropView.backgroundColor = UIColor.black.withAlphaComponent(0.85)
         addSubview(backdropView)
         
-        // Background
-        backgroundView.backgroundColor = UIColor.black.withAlphaComponent(0.8)
-        backgroundView.layer.cornerRadius = 16
-        addSubview(backgroundView)
+        // No background view - use full screen backdrop like webcomponent
         
         // Content container
         contentView.backgroundColor = .clear
         addSubview(contentView)
         
-        // Instruction label
-        instructionLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        // Instruction title (h2 equivalent)
+        instructionTitleLabel.font = UIFont.systemFont(ofSize: 24, weight: .bold)
+        instructionTitleLabel.textColor = .white
+        instructionTitleLabel.textAlignment = .center
+        instructionTitleLabel.numberOfLines = 0
+        contentView.addSubview(instructionTitleLabel)
+        
+        // Main instruction text
+        instructionLabel.font = UIFont.systemFont(ofSize: 18, weight: .semibold)
         instructionLabel.textColor = .white
         instructionLabel.textAlignment = .center
         instructionLabel.numberOfLines = 0
         contentView.addSubview(instructionLabel)
+        
+        // Instruction subtext
+        instructionSubtextLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        instructionSubtextLabel.textColor = UIColor.white.withAlphaComponent(0.7)
+        instructionSubtextLabel.textAlignment = .center
+        instructionSubtextLabel.numberOfLines = 0
+        contentView.addSubview(instructionSubtextLabel)
         
         // Animation container - hidden in text-only mode
         animationContainerView.backgroundColor = .clear
@@ -235,17 +239,16 @@ internal class JAAKInstructionView: UIView {
         // Hide the instruction content and backdrop initially
         backdropView.isHidden = true
         backdropView.alpha = 0.0
-        backgroundView.isHidden = true
-        backgroundView.alpha = 0.0
         contentView.isHidden = true
         contentView.alpha = 0.0
     }
     
     private func setupLayout() {
         backdropView.translatesAutoresizingMaskIntoConstraints = false
-        backgroundView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
+        instructionTitleLabel.translatesAutoresizingMaskIntoConstraints = false
         instructionLabel.translatesAutoresizingMaskIntoConstraints = false
+        instructionSubtextLabel.translatesAutoresizingMaskIntoConstraints = false
         animationContainerView.translatesAutoresizingMaskIntoConstraints = false
         progressView.translatesAutoresizingMaskIntoConstraints = false
         helpButton.translatesAutoresizingMaskIntoConstraints = false
@@ -258,37 +261,41 @@ internal class JAAKInstructionView: UIView {
             backdropView.trailingAnchor.constraint(equalTo: trailingAnchor),
             backdropView.bottomAnchor.constraint(equalTo: bottomAnchor),
             
-            // Background - centered both horizontally and vertically, width adjusts to content
-            backgroundView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            backgroundView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            backgroundView.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 32),
-            backgroundView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -32),
-            backgroundView.heightAnchor.constraint(lessThanOrEqualToConstant: 100),
-            backgroundView.heightAnchor.constraint(greaterThanOrEqualToConstant: 80),
+            // Content - centered on full screen like webcomponent
+            contentView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            contentView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            contentView.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 20),
+            contentView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20),
             
-            // Content - positioned relative to background with generous padding
-            contentView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 20),
-            contentView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 24),
-            contentView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -24),
-            contentView.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -20),
+            // Instruction title at top
+            instructionTitleLabel.topAnchor.constraint(equalTo: contentView.topAnchor),
+            instructionTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            instructionTitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
-            // Animation container - hidden
-            animationContainerView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            // Animation container between title and text (hidden for now)
+            animationContainerView.topAnchor.constraint(equalTo: instructionTitleLabel.bottomAnchor, constant: 30),
             animationContainerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             animationContainerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             animationContainerView.heightAnchor.constraint(equalToConstant: 0),
             
-            // Instruction label - now at top
-            instructionLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            // Main instruction text
+            instructionLabel.topAnchor.constraint(equalTo: animationContainerView.bottomAnchor, constant: 30),
             instructionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             instructionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
-            // Progress view
-            progressView.topAnchor.constraint(equalTo: instructionLabel.bottomAnchor, constant: 8),
-            progressView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            progressView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            // Instruction subtext
+            instructionSubtextLabel.topAnchor.constraint(equalTo: instructionLabel.bottomAnchor, constant: 10),
+            instructionSubtextLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            instructionSubtextLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            
+            // Progress view at top (like webcomponent)
+            progressView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 40),
+            progressView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            progressView.widthAnchor.constraint(equalToConstant: 300),
             progressView.heightAnchor.constraint(equalToConstant: 4),
-            progressView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            
+            // Content view bottom constraint
+            instructionSubtextLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
             
             // Help button (?) - positioned at top-left of the full screen
             helpButton.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 16),
@@ -323,10 +330,22 @@ internal class JAAKInstructionView: UIView {
     
     private func getDefaultInstructions() -> [String] {
         return [
-            "Quítate las gafas para una mejor detección",
-            "Quítate el sombrero o gorra",
-            "Quítate los auriculares", 
-            "Asegúrate de tener buena iluminación en tu rostro"
+            "Centre su rostro en el encuadre, manténgase a la distancia correcta y mire de frente sin inclinar la cabeza",
+            "Retire gorra, lentes, cubrebocas y otros accesorios"
+        ]
+    }
+    
+    private func getInstructionTitles() -> [String] {
+        return [
+            "Posición del rostro",
+            "Sin accesorios"
+        ]
+    }
+    
+    private func getInstructionSubtexts() -> [String] {
+        return [
+            "La grabación iniciará automáticamente",
+            "Para una detección facial óptima"
         ]
     }
     
@@ -348,14 +367,20 @@ internal class JAAKInstructionView: UIView {
         currentState = .animating
         let step = instructionSteps[currentStepIndex]
         
-        // Update text
-        instructionLabel.text = step.text
+        // Update content following webcomponent structure
+        let titles = getInstructionTitles()
+        let instructions = getDefaultInstructions()
+        let subtexts = getInstructionSubtexts()
+        
+        if currentStepIndex < titles.count {
+            instructionTitleLabel.text = titles[currentStepIndex]
+            instructionLabel.text = instructions[currentStepIndex]
+            instructionSubtextLabel.text = subtexts[currentStepIndex]
+        }
         
         // Update progress
         let progress = Float(currentStepIndex + 1) / Float(instructionSteps.count)
         updateProgress(progress)
-        
-        // Skip animations - show text only
         
         // Start timer for next step
         stepTimer = Timer.scheduledTimer(withTimeInterval: step.duration, repeats: false) { [weak self] _ in
