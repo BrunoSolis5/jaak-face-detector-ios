@@ -1,11 +1,5 @@
 import UIKit
 
-protocol JAAKInstructionViewDelegate: AnyObject {
-    func instructionView(_ instructionView: JAAKInstructionView, didComplete completed: Bool)
-    func instructionViewHelpButtonTapped(_ instructionView: JAAKInstructionView)
-    func instructionView(_ instructionView: JAAKInstructionView, willStartInstructions isStarting: Bool)
-}
-
 /// Instruction view for guiding users through face detection process
 internal class JAAKInstructionView: UIView {
     
@@ -891,144 +885,208 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func loadIconImage(named: String) -> UIImage? {
-        // Get the bundle for this framework/library
-        let frameworkBundle = Bundle(for: type(of: self))
-        
-        // Try loading from resource bundle (JAAKFaceDetector.bundle)
-        if let resourceBundleURL = frameworkBundle.url(forResource: "JAAKFaceDetector", withExtension: "bundle"),
-           let resourceBundle = Bundle(url: resourceBundleURL),
-           let image = UIImage(named: named, in: resourceBundle, compatibleWith: nil) {
-            print("✅ Loaded icon '\(named)' from resource bundle")
-            return image
-        }
-        
-        // Try loading from framework bundle Resources directory
-        if let path = frameworkBundle.path(forResource: named, ofType: "png", inDirectory: "Resources"),
-           let image = UIImage(contentsOfFile: path) {
-            print("✅ Loaded icon '\(named)' from framework bundle Resources")
-            return image
-        }
-        
-        // Try loading from framework bundle Assets directory
-        if let path = frameworkBundle.path(forResource: named, ofType: "png", inDirectory: "Assets"),
-           let image = UIImage(contentsOfFile: path) {
-            print("✅ Loaded icon '\(named)' from framework bundle Assets")
-            return image
-        }
-        
-        // Try loading from framework bundle root
-        if let path = frameworkBundle.path(forResource: named, ofType: "png"),
-           let image = UIImage(contentsOfFile: path) {
-            print("✅ Loaded icon '\(named)' from framework bundle root")
-            return image
-        }
-        
-        // Try absolute paths for development
-        let developmentPaths = [
-            "/Users/diego.bruno/Development/iOS/JAAKFaceDetector/JAAKFaceDetector/Resources/\(named).png",
+        // Try multiple paths to find the image
+        let possiblePaths = [
             "/Users/diego.bruno/Development/iOS/JAAKFaceDetector/JAAKFaceDetector/Assets/\(named).png",
-            "/Users/diego.bruno/Development/iOS/JAAKFaceDetector/JAAKFaceDetector/\(named).png"
-        ]
+            Bundle.main.path(forResource: named, ofType: "png"),
+            Bundle(for: type(of: self)).path(forResource: named, ofType: "png")
+        ].compactMap { $0 }
         
-        for devPath in developmentPaths {
-            if let image = UIImage(contentsOfFile: devPath) {
-                print("✅ Loaded icon '\(named)' from development path: \(devPath)")
+        for path in possiblePaths {
+            if let image = UIImage(contentsOfFile: path) {
+                print("✅ Loaded icon '\(named)' from: \(path)")
                 return image
             }
         }
         
-        // Try main bundle as fallback
-        if let image = UIImage(named: named, in: frameworkBundle, compatibleWith: nil) {
-            print("✅ Loaded icon '\(named)' from framework bundle by name")
-            return image
-        }
-        
-        // Final fallback: main app bundle
+        // Final fallback: try loading from main bundle by name
         if let image = UIImage(named: named) {
-            print("✅ Loaded icon '\(named)' from main app bundle")
+            print("✅ Loaded icon '\(named)' from main bundle")
             return image
         }
         
         print("❌ Failed to load icon '\(named)'")
-        print("  - Framework bundle: \(frameworkBundle.bundlePath)")
-        print("  - Framework bundle identifier: \(frameworkBundle.bundleIdentifier ?? "unknown")")
-        
-        // Debug: List available resources
-        if let resourceBundleURL = frameworkBundle.url(forResource: "JAAKFaceDetector", withExtension: "bundle") {
-            print("  - Resource bundle found at: \(resourceBundleURL)")
-        } else {
-            print("  - No resource bundle found")
-        }
-        
         return nil
     }
     
-    // MARK: - Helper Functions
-    
-    private func forceResetSegmentProgress(stepIndex: Int) {
-        guard stepIndex < segmentFills.count && stepIndex < progressSegments.count else { return }
+    private func createAnimationView(for animationName: String) -> UIView {
+        let view = UIView()
+        view.backgroundColor = UIColor.white.withAlphaComponent(0.2)
+        view.layer.cornerRadius = 40
         
-        let fill = segmentFills[stepIndex]
-        let segment = progressSegments[stepIndex]
-        
-        // Remove all existing width constraints
-        fill.constraints.forEach { constraint in
-            if constraint.firstAttribute == .width {
-                constraint.isActive = false
+        // Create appropriate placeholder based on animation name or URL
+        if animationName.contains("glasses") {
+            view.backgroundColor = UIColor.blue.withAlphaComponent(0.3)
+            addGlassesPlaceholder(to: view)
+        } else if animationName.contains("hat") {
+            view.backgroundColor = UIColor.green.withAlphaComponent(0.3)
+            addHatPlaceholder(to: view)
+        } else if animationName.contains("headphones") {
+            view.backgroundColor = UIColor.purple.withAlphaComponent(0.3)
+            addHeadphonesPlaceholder(to: view)
+        } else if animationName.contains("light") {
+            view.backgroundColor = UIColor.yellow.withAlphaComponent(0.3)
+            addLightPlaceholder(to: view)
+        } else {
+            // Handle old animation names
+            switch animationName {
+            case "center_face":
+                view.layer.borderWidth = 2
+                view.layer.borderColor = UIColor.white.cgColor
+                
+            case "move_closer":
+                view.backgroundColor = UIColor.green.withAlphaComponent(0.3)
+                
+            case "move_away":
+                view.backgroundColor = UIColor.orange.withAlphaComponent(0.3)
+                
+            case "hold_still":
+                view.backgroundColor = UIColor.blue.withAlphaComponent(0.3)
+                
+            default:
+                view.layer.borderWidth = 2
+                view.layer.borderColor = UIColor.white.cgColor
             }
         }
         
-        // Reset background to inactive state
-        segment.backgroundColor = UIColor.white.withAlphaComponent(0.2)
-        
-        // Create new constraint with 0 width
-        let resetConstraint = fill.widthAnchor.constraint(equalTo: segment.widthAnchor, multiplier: 0)
-        resetConstraint.isActive = true
-        
-        // Force immediate layout update
-        segment.layoutIfNeeded()
+        return view
     }
     
-    private func forceCompleteSegmentProgress(stepIndex: Int) {
-        guard stepIndex < segmentFills.count && stepIndex < progressSegments.count else { return }
+    
+    private func addGlassesPlaceholder(to view: UIView) {
+        let leftLens = UIView()
+        leftLens.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        leftLens.layer.cornerRadius = 8
+        leftLens.frame = CGRect(x: 15, y: 30, width: 16, height: 16)
+        view.addSubview(leftLens)
         
-        let fill = segmentFills[stepIndex]
-        let segment = progressSegments[stepIndex]
+        let rightLens = UIView()
+        rightLens.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        rightLens.layer.cornerRadius = 8
+        rightLens.frame = CGRect(x: 49, y: 30, width: 16, height: 16)
+        view.addSubview(rightLens)
+    }
+    
+    private func addHatPlaceholder(to view: UIView) {
+        let hatTop = UIView()
+        hatTop.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        hatTop.layer.cornerRadius = 6
+        hatTop.frame = CGRect(x: 30, y: 20, width: 20, height: 20)
+        view.addSubview(hatTop)
         
-        // Remove all existing width constraints
-        fill.constraints.forEach { constraint in
-            if constraint.firstAttribute == .width {
-                constraint.isActive = false
+        let hatBrim = UIView()
+        hatBrim.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        hatBrim.layer.cornerRadius = 4
+        hatBrim.frame = CGRect(x: 20, y: 35, width: 40, height: 8)
+        view.addSubview(hatBrim)
+    }
+    
+    private func addHeadphonesPlaceholder(to view: UIView) {
+        let leftEar = UIView()
+        leftEar.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        leftEar.layer.cornerRadius = 8
+        leftEar.frame = CGRect(x: 10, y: 25, width: 16, height: 20)
+        view.addSubview(leftEar)
+        
+        let rightEar = UIView()
+        rightEar.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        rightEar.layer.cornerRadius = 8
+        rightEar.frame = CGRect(x: 54, y: 25, width: 16, height: 20)
+        view.addSubview(rightEar)
+    }
+    
+    private func addLightPlaceholder(to view: UIView) {
+        let lightBulb = UIView()
+        lightBulb.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        lightBulb.layer.cornerRadius = 12
+        lightBulb.frame = CGRect(x: 28, y: 28, width: 24, height: 24)
+        view.addSubview(lightBulb)
+    }
+    
+    
+    private func startAnimation(_ view: UIView, for animationName: String) {
+        // Animate based on animation name or URL content
+        if animationName.contains("glasses") {
+            animateGlasses(view)
+        } else if animationName.contains("hat") {
+            animateHat(view)
+        } else if animationName.contains("headphones") {
+            animateHeadphones(view)
+        } else if animationName.contains("light") {
+            animateLight(view)
+        } else {
+            // Handle old animation names
+            switch animationName {
+            case "center_face":
+                animateCenterFace(view)
+                
+            case "move_closer":
+                animateMoveCloser(view)
+                
+            case "move_away":
+                animateMoveAway(view)
+                
+            case "hold_still":
+                animateHoldStill(view)
+                
+            default:
+                animateDefault(view)
             }
         }
-        
-        // Set background to active state
-        segment.backgroundColor = UIColor.white.withAlphaComponent(0.3)
-        
-        // Create new constraint with 100% width
-        let completeConstraint = fill.widthAnchor.constraint(equalTo: segment.widthAnchor, multiplier: 1.0)
-        completeConstraint.isActive = true
-        
-        // Force immediate layout update
-        segment.layoutIfNeeded()
     }
     
-    @objc private func helpButtonTapped() {
-        showInstructions()
+    private func animateCenterFace(_ view: UIView) {
+        UIView.animate(withDuration: 1.0, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.transform = CGAffineTransform(scaleX: 1.2, y: 1.2)
+        })
     }
     
-    @objc private func buttonTouchDown(_ sender: UIButton) {
-        UIView.animate(withDuration: 0.1) {
-            sender.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
-            sender.alpha = 0.8
-        }
+    private func animateMoveCloser(_ view: UIView) {
+        UIView.animate(withDuration: 1.5, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.transform = CGAffineTransform(scaleX: 1.5, y: 1.5)
+        })
     }
     
-    @objc private func buttonTouchUp(_ sender: UIButton) {
-        UIView.animate(withDuration: 0.1) {
-            sender.transform = .identity
-            sender.alpha = 1.0
-        }
+    private func animateMoveAway(_ view: UIView) {
+        UIView.animate(withDuration: 1.5, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.transform = CGAffineTransform(scaleX: 0.7, y: 0.7)
+        })
+    }
+    
+    private func animateHoldStill(_ view: UIView) {
+        UIView.animate(withDuration: 0.5, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.alpha = 0.5
+        })
+    }
+    
+    private func animateDefault(_ view: UIView) {
+        UIView.animate(withDuration: 2.0, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.transform = CGAffineTransform(rotationAngle: .pi)
+        })
+    }
+    
+    private func animateGlasses(_ view: UIView) {
+        UIView.animate(withDuration: 1.0, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
+        })
+    }
+    
+    private func animateHat(_ view: UIView) {
+        UIView.animate(withDuration: 1.2, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.transform = CGAffineTransform(translationX: 0, y: -8)
+        })
+    }
+    
+    private func animateHeadphones(_ view: UIView) {
+        UIView.animate(withDuration: 0.8, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.transform = CGAffineTransform(rotationAngle: .pi / 12)
+        })
+    }
+    
+    private func animateLight(_ view: UIView) {
+        UIView.animate(withDuration: 0.6, delay: 0, options: [.repeat, .autoreverse], animations: {
+            view.alpha = 0.4
+        })
     }
     
     private func loadWatermarkImage() {
@@ -1051,4 +1109,109 @@ internal class JAAKInstructionView: UIView {
             }
         }.resume()
     }
+    
+    
+    @objc private func helpButtonTapped() {
+        // Delegate back to the main controller
+        delegate?.instructionViewHelpButtonTapped(self)
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        // Always allow touches on help button
+        if let hitView = helpButton.hitTest(convert(point, to: helpButton), with: event) {
+            return hitView
+        }
+        
+        // For instruction content, only allow touches when background and content are visible
+        if !backgroundView.isHidden && backgroundView.alpha > 0.0 && !contentView.isHidden && contentView.alpha > 0.0 {
+            return super.hitTest(point, with: event)
+        }
+        
+        // If instructions are hidden, don't intercept touches (let them pass through)
+        return nil
+    }
+    
+    deinit {
+        stopCurrentTimer()
+    }
+    
+    // MARK: - Button Visual Effects
+    
+    @objc private func buttonTouchDown(_ sender: UIButton) {
+        UIView.animate(withDuration: 0.1) {
+            sender.backgroundColor = UIColor.white.withAlphaComponent(0.2)
+            sender.layer.borderColor = UIColor.white.withAlphaComponent(0.5).cgColor
+            sender.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+        }
+    }
+    
+    @objc private func buttonTouchUp(_ sender: UIButton) {
+        UIView.animate(withDuration: 0.2, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: [], animations: {
+            sender.backgroundColor = UIColor.white.withAlphaComponent(0.1)
+            sender.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
+            sender.transform = .identity
+        })
+    }
+    
+    private func forceResetSegmentProgress(stepIndex: Int) {
+        guard stepIndex < segmentFills.count && stepIndex < progressSegments.count else { return }
+        
+        let fill = segmentFills[stepIndex]
+        let segment = progressSegments[stepIndex]
+        
+        // Remove ALL existing width constraints immediately
+        fill.removeFromSuperview()
+        segment.addSubview(fill)
+        
+        // Set up fresh constraints for 0% progress
+        fill.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            fill.topAnchor.constraint(equalTo: segment.topAnchor),
+            fill.leadingAnchor.constraint(equalTo: segment.leadingAnchor),
+            fill.bottomAnchor.constraint(equalTo: segment.bottomAnchor),
+            fill.widthAnchor.constraint(equalTo: segment.widthAnchor, multiplier: 0) // 0% width
+        ])
+        
+        // Reset segment background to inactive state
+        segment.backgroundColor = UIColor.white.withAlphaComponent(0.2)
+        
+        // Force immediate layout update
+        segment.setNeedsLayout()
+        segment.layoutIfNeeded()
+    }
+    
+    private func forceCompleteSegmentProgress(stepIndex: Int) {
+        guard stepIndex < segmentFills.count && stepIndex < progressSegments.count else { return }
+        
+        let fill = segmentFills[stepIndex]
+        let segment = progressSegments[stepIndex]
+        
+        // Remove existing width constraints
+        fill.constraints.forEach { constraint in
+            if constraint.firstAttribute == .width {
+                constraint.isActive = false
+            }
+        }
+        
+        // Set to 100% width immediately
+        let widthConstraint = fill.widthAnchor.constraint(equalTo: segment.widthAnchor, multiplier: 1.0)
+        widthConstraint.isActive = true
+        
+        // Update segment background to active/completed state
+        segment.backgroundColor = UIColor.white.withAlphaComponent(0.3)
+        
+        // Force immediate layout update (no animation)
+        segment.setNeedsLayout()
+        segment.layoutIfNeeded()
+        
+        print("✅ [JAAKInstructionView] Segment \(stepIndex) forced to 100%")
+    }
+}
+
+// MARK: - JAAKInstructionViewDelegate
+
+protocol JAAKInstructionViewDelegate: AnyObject {
+    func instructionView(_ instructionView: JAAKInstructionView, didComplete completed: Bool)
+    func instructionViewHelpButtonTapped(_ instructionView: JAAKInstructionView)
+    func instructionView(_ instructionView: JAAKInstructionView, willStartInstructions isStarting: Bool)
 }
