@@ -119,19 +119,21 @@ internal class JAAKRecordingTimer: UIView {
         // Configure frame size
         frame.size = configuration.size
         
-        // Setup background circle
-        backgroundLayer.strokeColor = configuration.circleEmptyColor.cgColor
+        // Setup background circle - hidden
+        backgroundLayer.strokeColor = UIColor.clear.cgColor
         backgroundLayer.fillColor = UIColor.clear.cgColor
-        backgroundLayer.lineWidth = configuration.strokeWidth
-        backgroundLayer.lineDashPattern = configuration.dashPattern
+        backgroundLayer.lineWidth = 0
+        backgroundLayer.lineDashPattern = nil
+        backgroundLayer.isHidden = true
         layer.addSublayer(backgroundLayer)
         
-        // Setup progress circle
-        progressLayer.strokeColor = configuration.circleColor.cgColor
+        // Setup progress circle - hidden
+        progressLayer.strokeColor = UIColor.clear.cgColor
         progressLayer.fillColor = UIColor.clear.cgColor
-        progressLayer.lineWidth = configuration.strokeWidth
+        progressLayer.lineWidth = 0
         progressLayer.lineCap = .round
         progressLayer.strokeEnd = 0.0
+        progressLayer.isHidden = true
         layer.addSublayer(progressLayer)
         
         // Setup timer label
@@ -171,19 +173,17 @@ internal class JAAKRecordingTimer: UIView {
     }
     
     private func updateColors() {
-        progressLayer.strokeColor = configuration.circleColor.cgColor
-        backgroundLayer.strokeColor = configuration.circleEmptyColor.cgColor
+        // Keep circles hidden
+        progressLayer.strokeColor = UIColor.clear.cgColor
+        backgroundLayer.strokeColor = UIColor.clear.cgColor
         timerLabel.textColor = configuration.textColor
     }
     
     private func updateColorsForSuccess() {
-        progressLayer.strokeColor = configuration.circleSuccessColor.cgColor
+        // Keep circles hidden
+        progressLayer.strokeColor = UIColor.clear.cgColor
         
-        // Animate color change
-        CATransaction.begin()
-        CATransaction.setAnimationDuration(0.3)
-        progressLayer.strokeColor = configuration.circleSuccessColor.cgColor
-        CATransaction.commit()
+        // Skip animation for hidden circles
     }
     
     override func layoutSubviews() {
