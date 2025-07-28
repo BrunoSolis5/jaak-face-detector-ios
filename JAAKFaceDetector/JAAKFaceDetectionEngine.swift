@@ -193,7 +193,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
         let (isValidPosition, instructionMessage) = validateFacePositionWithInstructions(primaryFace)
         
         let message = JAAKFaceDetectionMessage(
-            label: isValidPosition ? "¡Perfecto! Listo para grabar" : instructionMessage,
+            label: isValidPosition ? "Perfecto" : instructionMessage,
             details: "Face confidence: \(confidence)",
             faceExists: true,
             correctPosition: isValidPosition
