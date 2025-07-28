@@ -617,7 +617,7 @@ internal class JAAKInstructionView: UIView {
     private func setupLayout() {
         // Get responsive sizes
         let sizes = getResponsiveSizes()
-        let topMargin: CGFloat = sizes.animationHeight >= 85 ? 30 : 20 // Reduce margins on smaller screens
+        let topMargin: CGFloat = sizes.animationHeight >= 85 ? 30 : 15 // More compact margins on iPhone
         
         backdropView.translatesAutoresizingMaskIntoConstraints = false
         contentView.translatesAutoresizingMaskIntoConstraints = false
@@ -640,9 +640,10 @@ internal class JAAKInstructionView: UIView {
             backdropView.trailingAnchor.constraint(equalTo: trailingAnchor),
             backdropView.bottomAnchor.constraint(equalTo: bottomAnchor),
             
-            // Content - let it size itself based on content
+            // Content - positioned between progress bar and buttons with responsive spacing
             contentView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            contentView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            contentView.topAnchor.constraint(equalTo: progressContainerView.bottomAnchor, constant: sizes.animationHeight >= 85 ? 40 : 25),
+            contentView.bottomAnchor.constraint(lessThanOrEqualTo: buttonContainerView.topAnchor, constant: -15),
             contentView.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 20),
             contentView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20),
             
@@ -671,8 +672,8 @@ internal class JAAKInstructionView: UIView {
             instructionSubtextLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             instructionSubtextLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor), // This closes the content view
             
-            // Progress container at top (like webcomponent)
-            progressContainerView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 40),
+            // Progress container at top (like webcomponent) - responsive spacing
+            progressContainerView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: sizes.animationHeight >= 85 ? 40 : 25),
             progressContainerView.centerXAnchor.constraint(equalTo: centerXAnchor),
             progressContainerView.widthAnchor.constraint(equalToConstant: 300),
             progressContainerView.heightAnchor.constraint(equalToConstant: 4),
@@ -683,8 +684,8 @@ internal class JAAKInstructionView: UIView {
             progressSegmentsStackView.trailingAnchor.constraint(equalTo: progressContainerView.trailingAnchor),
             progressSegmentsStackView.bottomAnchor.constraint(equalTo: progressContainerView.bottomAnchor),
             
-            // Button container at bottom (like webcomponent)
-            buttonContainerView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -40),
+            // Button container at bottom (like webcomponent) - responsive spacing
+            buttonContainerView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: sizes.animationHeight >= 85 ? -40 : -25),
             buttonContainerView.centerXAnchor.constraint(equalTo: centerXAnchor),
             buttonContainerView.heightAnchor.constraint(equalToConstant: 44),
             
@@ -1083,11 +1084,11 @@ internal class JAAKInstructionView: UIView {
         // iPhone (small screens)
         if screenWidth <= 390 || screenHeight <= 667 {
             return (
-                centerIcon: 60,        // 60x60 for center icon
-                accessoryIcon: 50,     // 50x50 for accessory icons
-                fontSize: 16,          // Smaller text
-                titleFontSize: 20,     // Smaller title
-                animationHeight: 70    // Reduced animation container
+                centerIcon: 50,        // Smaller center icon for better fit
+                accessoryIcon: 40,     // Smaller accessory icons
+                fontSize: 14,          // Smaller text for better fit
+                titleFontSize: 18,     // Smaller title for better fit
+                animationHeight: 60    // Reduced animation container for more space
             )
         }
         // iPad (large screens)
