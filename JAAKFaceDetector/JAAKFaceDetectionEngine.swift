@@ -381,11 +381,10 @@ internal class JAAKFaceDetectionEngine: NSObject {
             // **NEW: Check face yaw (rotation in Y-axis) - matching webcomponent behavior**
             let qualityMetrics = qualityAnalyzer.getDetailedMetrics(detection: detection)
             if !qualityMetrics.isYawOptimal {
-                let yawDegrees = abs(qualityMetrics.faceYaw)
                 if qualityMetrics.faceYaw > 0 {
-                    return (false, "Mira más hacia la izquierda (giro: \(String(format: "%.1f", yawDegrees))°)")
+                    return (false, "Mira más hacia la izquierda")
                 } else {
-                    return (false, "Mira más hacia la derecha (giro: \(String(format: "%.1f", yawDegrees))°)")
+                    return (false, "Mira más hacia la derecha")
                 }
             }
             
@@ -424,11 +423,10 @@ internal class JAAKFaceDetectionEngine: NSObject {
             // **NEW: Check face yaw (rotation in Y-axis) for pixel coordinates too**
             let qualityMetrics = qualityAnalyzer.getDetailedMetrics(detection: detection)
             if !qualityMetrics.isYawOptimal {
-                let yawDegrees = abs(qualityMetrics.faceYaw)
                 if qualityMetrics.faceYaw > 0 {
-                    return (false, "Mira más hacia la izquierda (giro: \(String(format: "%.1f", yawDegrees))°)")
+                    return (false, "Mira más hacia la izquierda")
                 } else {
-                    return (false, "Mira más hacia la derecha (giro: \(String(format: "%.1f", yawDegrees))°)")
+                    return (false, "Mira más hacia la derecha")
                 }
             }
             
