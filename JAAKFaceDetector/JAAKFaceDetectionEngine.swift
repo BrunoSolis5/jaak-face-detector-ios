@@ -12,6 +12,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
     private var consecutiveNoFaceFrames: Int = 0
     private let maxConsecutiveNoFaceFrames = 5
     private var isDetectionPaused: Bool = false
+    private var qualityAnalyzer: JAAKFaceQualityAnalyzer
     
     weak var delegate: JAAKFaceDetectionEngineDelegate?
     
@@ -21,6 +22,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
     
     init(configuration: JAAKFaceDetectorConfiguration) {
         self.configuration = configuration
+        self.qualityAnalyzer = JAAKFaceQualityAnalyzer()
         super.init()
     }
     
@@ -337,6 +339,17 @@ internal class JAAKFaceDetectionEngine: NSObject {
                 return (false, "Mira directamente a la cámara")
             }
             
+            // **NEW: Check face yaw (rotation in Y-axis) - matching webcomponent behavior**
+            let qualityMetrics = qualityAnalyzer.getDetailedMetrics(detection: detection)
+            if !qualityMetrics.isYawOptimal {
+                let yawDegrees = abs(qualityMetrics.faceYaw)
+                if qualityMetrics.faceYaw > 0 {
+                    return (false, "Mira más hacia la izquierda (giro: \(String(format: "%.1f", yawDegrees))°)")
+                } else {
+                    return (false, "Mira más hacia la derecha (giro: \(String(format: "%.1f", yawDegrees))°)")
+                }
+            }
+            
             // If all checks pass, face is in good position
             return (true, "¡Posición perfecta!")
             
@@ -367,6 +380,17 @@ internal class JAAKFaceDetectionEngine: NSObject {
                 return (false, "Baja un poco")
             } else if relativeCenterY > 0.75 {
                 return (false, "Sube un poco")
+            }
+            
+            // **NEW: Check face yaw (rotation in Y-axis) for pixel coordinates too**
+            let qualityMetrics = qualityAnalyzer.getDetailedMetrics(detection: detection)
+            if !qualityMetrics.isYawOptimal {
+                let yawDegrees = abs(qualityMetrics.faceYaw)
+                if qualityMetrics.faceYaw > 0 {
+                    return (false, "Mira más hacia la izquierda (giro: \(String(format: "%.1f", yawDegrees))°)")
+                } else {
+                    return (false, "Mira más hacia la derecha (giro: \(String(format: "%.1f", yawDegrees))°)")
+                }
             }
             
             return (true, "¡Posición perfecta!")
