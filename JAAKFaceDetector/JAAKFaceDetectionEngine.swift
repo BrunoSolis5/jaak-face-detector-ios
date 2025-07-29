@@ -14,6 +14,12 @@ internal class JAAKFaceDetectionEngine: NSObject {
     private var isDetectionPaused: Bool = false
     private var qualityAnalyzer: JAAKFaceQualityAnalyzer
     
+    // Stability tracking for auto-recording
+    private var consecutiveValidFrames: Int = 0
+    private var consecutiveInvalidFrames: Int = 0
+    private let requiredStabilityFrames = 3 // Need 3 consecutive valid frames to start recording
+    // NOTE: Cancellation is now immediate (no threshold needed)
+    
     weak var delegate: JAAKFaceDetectionEngineDelegate?
     
     private var configuration: JAAKFaceDetectorConfiguration
@@ -194,12 +200,34 @@ internal class JAAKFaceDetectionEngine: NSObject {
         // Validate face position and generate instructive message
         let (isValidPosition, instructionMessage) = validateFacePositionWithInstructions(primaryFace)
         
+        // Update stability counters
+        if isValidPosition {
+            consecutiveValidFrames += 1
+            consecutiveInvalidFrames = 0
+        } else {
+            consecutiveValidFrames = 0
+            consecutiveInvalidFrames += 1
+        }
+        
+        // Determine if position is stable enough for recording
+        let isStableForRecording = consecutiveValidFrames >= requiredStabilityFrames
+        // No longer need shouldCancelRecording since cancellation is immediate
+        
         let message = JAAKFaceDetectionMessage(
             label: isValidPosition ? "Perfecto" : instructionMessage,
-            details: "Face confidence: \(confidence)",
+            details: "Face confidence: \(confidence), Valid frames: \(consecutiveValidFrames), Invalid frames: \(consecutiveInvalidFrames)",
             faceExists: true,
-            correctPosition: isValidPosition
+            correctPosition: isStableForRecording // Only true when stable enough
         )
+        
+        // **IMPORTANT: IMMEDIATELY cancel recording when face position is incorrect**
+        if !isValidPosition {
+            print("❌ [FaceDetectionEngine] Face position incorrect - canceling recording immediately")
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.delegate?.faceDetectionEngine(self, shouldCancelRecording: true)
+            }
+        }
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -220,6 +248,17 @@ internal class JAAKFaceDetectionEngine: NSObject {
     
     private func handleNoFaceDetected() {
         consecutiveNoFaceFrames += 1
+        
+        // Reset stability counters when no face is detected
+        consecutiveValidFrames = 0
+        consecutiveInvalidFrames = 0
+        
+        // **IMPORTANT: IMMEDIATELY cancel recording when face is lost**
+        print("❌ [FaceDetectionEngine] No face detected - canceling recording immediately")
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.delegate?.faceDetectionEngine(self, shouldCancelRecording: true)
+        }
         
         let message = JAAKFaceDetectionMessage(
             label: "Dirige tu rostro hacia la cámara",
@@ -492,6 +531,13 @@ internal class JAAKFaceDetectionEngine: NSObject {
         self.configuration = newConfiguration
         print("✅ [FaceDetectionEngine] Configuration updated")
     }
+    
+    /// Reset stability counters (useful when recording starts/stops)
+    func resetStabilityCounters() {
+        consecutiveValidFrames = 0
+        consecutiveInvalidFrames = 0
+        print("🔄 [FaceDetectionEngine] Stability counters reset")
+    }
 }
 
 // MARK: - FaceDetectorLiveStreamDelegate
@@ -542,4 +588,5 @@ protocol JAAKFaceDetectionEngineDelegate: AnyObject {
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didDetectFace message: JAAKFaceDetectionMessage, boundingBox: CGRect, videoNativeSize: CGSize)
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didDetectFaces detections: [Detection], sampleBuffer: CMSampleBuffer)
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didFailWithError error: JAAKFaceDetectorError)
+    func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, shouldCancelRecording: Bool)
 }

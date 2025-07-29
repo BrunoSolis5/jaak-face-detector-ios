@@ -46,7 +46,7 @@ internal class JAAKRecordingTimer: UIView {
         updateProgress(0.0)
     }
     
-    /// Stop the recording timer
+    /// Stop the recording timer (successful completion)
     func stopTimer() {
         isRecording = false
         
@@ -57,6 +57,16 @@ internal class JAAKRecordingTimer: UIView {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             self.hide()
         }
+    }
+    
+    /// Cancel the recording timer immediately (for cancellations)
+    func cancelTimer() {
+        isRecording = false
+        
+        // Hide immediately without any delay or animation
+        hideImmediately()
+        
+        print("🚫 [RecordingTimer] Timer canceled and hidden immediately")
     }
     
     
@@ -109,6 +119,22 @@ internal class JAAKRecordingTimer: UIView {
         } completion: { _ in
             self.isHidden = true
         }
+    }
+    
+    /// Hide the timer immediately without animation (for cancellations)
+    func hideImmediately() {
+        // Stop any ongoing animations
+        layer.removeAllAnimations()
+        subviews.forEach { $0.layer.removeAllAnimations() }
+        
+        // Reset state immediately
+        alpha = 0.0
+        isHidden = true
+        transform = .identity
+        currentProgress = 0.0
+        isRecording = false
+        
+        print("⚡ [RecordingTimer] Hidden immediately for instant reset")
     }
     
     // MARK: - Private Methods

@@ -651,13 +651,13 @@ extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
             
         }
         
-        // Handle auto-recording with detailed debugging
+        // Handle auto-recording with stability logic
         
         if configuration.autoRecorder && (status == .running || status == .recording) {
             if message.faceExists && message.correctPosition {
-                // Start recording if not already recording
+                // Start recording if not already recording and face is stable
                 if let videoRecorder = videoRecorder, !videoRecorder.isRecording(), cameraManager != nil {
-                    print("🎬 [FaceDetectorSDK] Auto-recording triggered - starting video recording")
+                    print("🎬 [FaceDetectorSDK] Auto-recording triggered (stable position) - starting video recording")
                     recordVideo { result in
                         switch result {
                         case .success(let fileResult):
@@ -666,22 +666,19 @@ extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
                             self.delegate?.faceDetector(self, didEncounterError: error)
                         }
                     }
-                } else {
-                    print("❌ [AutoRecorder Debug] Cannot start recording - videoRecorder: \(videoRecorder != nil), isRecording: \(videoRecorder?.isRecording() ?? false), cameraManager: \(cameraManager != nil)")
+                } else if let videoRecorder = videoRecorder, videoRecorder.isRecording() {
+                    // Continue recording - face is still in good position
+                    print("✅ [FaceDetectorSDK] Face still in good position - continuing recording")
                 }
             } else {
-                // Cancel recording if face is lost during recording
+                // Face is not in correct position or doesn't exist
                 if let videoRecorder = videoRecorder, videoRecorder.isRecording() {
-                    print("❌ [FaceDetectorSDK] Face lost during auto-recording - canceling recording")
-                    stopRecording()
-                    updateStatus(.running) // Reset status back to running (not finished)
-                    
-                    // Notify that recording was canceled
-                    let cancelError = JAAKFaceDetectorError(
-                        label: "Auto-recording canceled - face detection lost", 
-                        code: "AUTO_RECORDING_CANCELED"
-                    )
-                    delegate?.faceDetector(self, didEncounterError: cancelError)
+                    // The FaceDetectionEngine will handle IMMEDIATE cancellation
+                    if !message.faceExists {
+                        print("⚠️ [FaceDetectorSDK] No face detected during recording - will cancel immediately")
+                    } else {
+                        print("⚠️ [FaceDetectorSDK] Face position incorrect during recording - will cancel immediately")
+                    }
                 }
             }
         }
@@ -704,6 +701,32 @@ extension JAAKFaceDetectorSDK: JAAKFaceDetectionEngineDelegate {
         instructionController?.handleError(error)
         delegate?.faceDetector(self, didEncounterError: error)
     }
+    
+    func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, shouldCancelRecording: Bool) {
+        // Cancel recording if face has been unstable for too long or face is lost
+        if shouldCancelRecording, let videoRecorder = videoRecorder, videoRecorder.isRecording() {
+            print("❌ [FaceDetectorSDK] Canceling recording due to face detection issues")
+            
+            // Cancel timer IMMEDIATELY without animation
+            recordingTimer?.cancelTimer()
+            
+            // Stop the actual video recording
+            videoRecorder.stopRecording(with: cameraManager!)
+            
+            // Reset status back to running (not finished)
+            updateStatus(.running)
+            
+            // Reset stability counters after cancellation
+            engine.resetStabilityCounters()
+            
+            // Notify that recording was canceled with a user-friendly message
+            let cancelError = JAAKFaceDetectorError(
+                label: "Grabación cancelada - mantén tu rostro centrado y visible", 
+                code: "AUTO_RECORDING_CANCELED_FACE_LOST"
+            )
+            delegate?.faceDetector(self, didEncounterError: cancelError)
+        }
+    }
 }
 
 // MARK: - JAAKVideoRecorderDelegate
@@ -713,6 +736,10 @@ extension JAAKFaceDetectorSDK: JAAKVideoRecorderDelegate {
         print("🎬 [FaceDetectorSDK] Video recorder started, starting timer with duration: \(configuration.videoDuration)")
         updateStatus(.recording)
         recordingTimer?.startTimer(duration: configuration.videoDuration)
+        
+        // Reset stability counters when recording starts successfully
+        faceDetectionEngine?.resetStabilityCounters()
+        
         print("🎬 [FaceDetectorSDK] Timer start command sent to recordingTimer: \(String(describing: recordingTimer))")
     }
     
@@ -733,7 +760,8 @@ extension JAAKFaceDetectorSDK: JAAKVideoRecorderDelegate {
     
     func videoRecorder(_ recorder: JAAKVideoRecorder, didFailWithError error: JAAKFaceDetectorError) {
         updateStatus(.error)
-        recordingTimer?.stopTimer()
+        // Cancel timer immediately on error (no need for fade out animation)
+        recordingTimer?.cancelTimer()
         delegate?.faceDetector(self, didEncounterError: error)
     }
 }
