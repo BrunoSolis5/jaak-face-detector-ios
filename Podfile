@@ -1,14 +1,14 @@
-# Podfile para JAAKFaceDetector
+# Podfile para JAAKVisage
 platform :ios, '12.0'
 use_frameworks!
 
-target 'JAAKFaceDetector' do
+target 'JAAKVisage' do
   # MediaPipe Tasks Vision for face detection
   pod 'MediaPipeTasksVision'
   
   
   # Testing target
-  target 'JAAKFaceDetectorTests' do
+  target 'JAAKVisageTests' do
     inherit! :search_paths
   end
 end

@@ -62,10 +62,10 @@ internal class JAAKPermissionManager {
     /// - Parameters:
     ///   - enableMicrophone: whether microphone is needed
     ///   - completion: completion handler with result
-    static func requestRequiredPermissions(enableMicrophone: Bool, completion: @escaping (Bool, JAAKFaceDetectorError?) -> Void) {
+    static func requestRequiredPermissions(enableMicrophone: Bool, completion: @escaping (Bool, JAAKVisageError?) -> Void) {
         requestCameraPermission { cameraGranted in
             guard cameraGranted else {
-                let error = JAAKFaceDetectorError(
+                let error = JAAKVisageError(
                     label: "Permiso de cámara denegado",
                     code: "CAMERA_PERMISSION_DENIED"
                 )
@@ -78,7 +78,7 @@ internal class JAAKPermissionManager {
                     if microphoneGranted {
                         completion(true, nil)
                     } else {
-                        let error = JAAKFaceDetectorError(
+                        let error = JAAKVisageError(
                             label: "Permiso de micrófono denegado",
                             code: "MICROPHONE_PERMISSION_DENIED"
                         )

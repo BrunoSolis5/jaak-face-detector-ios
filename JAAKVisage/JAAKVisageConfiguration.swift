@@ -24,8 +24,8 @@ public struct JAAKFaceTrackerStyles {
     public init() {}
 }
 
-/// Main configuration structure for JAAKFaceDetector
-public struct JAAKFaceDetectorConfiguration {
+/// Main configuration structure for JAAKVisage
+public struct JAAKVisageConfiguration {
     // Basic Settings
     public var width: CGFloat = 0
     public var height: CGFloat = 0

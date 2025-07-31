@@ -7,10 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		2E1478BC0098F0FCE772DC0D /* Pods_JAAKFaceDetectorTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F83BA306279D391EFF31A30 /* Pods_JAAKFaceDetectorTests.framework */; };
-		7280410147DDA82FA336E964 /* Pods_JAAKFaceDetector.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FAF511BC90E41E7710D6B7B8 /* Pods_JAAKFaceDetector.framework */; };
-		8AF9E3CA2E1EFDB800EEA8B3 /* JAAKFaceDetector.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8AF9E3BF2E1EFDB700EEA8B3 /* JAAKFaceDetector.framework */; };
+		377DCBC653636BA434F1A1B2 /* Pods_JAAKVisage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05F98E96E7609414797EF5AB /* Pods_JAAKVisage.framework */; };
+		8AF9E3CA2E1EFDB800EEA8B3 /* JAAKVisage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8AF9E3BF2E1EFDB700EEA8B3 /* JAAKVisage.framework */; };
 		8AF9E3FF2E1F27BE00EEA8B3 /* Podfile in Resources */ = {isa = PBXBuildFile; fileRef = 8AF9E3FE2E1F27BE00EEA8B3 /* Podfile */; };
+		F614651164ADE83E057EF2E6 /* Pods_JAAKVisageTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 423C54339360C5284CF8E791 /* Pods_JAAKVisageTests.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -19,44 +19,46 @@
 			containerPortal = 8AF9E3B62E1EFDB700EEA8B3 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 8AF9E3BE2E1EFDB700EEA8B3;
-			remoteInfo = JAAKFaceDetector;
+			remoteInfo = JAAKVisage;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		05258EB8858B5665B4680F66 /* Pods-JAAKFaceDetector.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JAAKFaceDetector.debug.xcconfig"; path = "Target Support Files/Pods-JAAKFaceDetector/Pods-JAAKFaceDetector.debug.xcconfig"; sourceTree = "<group>"; };
-		3D006FC1F8AAC8C4E95D3AFC /* Pods-JAAKFaceDetectorTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JAAKFaceDetectorTests.release.xcconfig"; path = "Target Support Files/Pods-JAAKFaceDetectorTests/Pods-JAAKFaceDetectorTests.release.xcconfig"; sourceTree = "<group>"; };
-		3F83BA306279D391EFF31A30 /* Pods_JAAKFaceDetectorTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_JAAKFaceDetectorTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		6D5DB8B0F38F9F496812610E /* Pods-JAAKFaceDetectorTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JAAKFaceDetectorTests.debug.xcconfig"; path = "Target Support Files/Pods-JAAKFaceDetectorTests/Pods-JAAKFaceDetectorTests.debug.xcconfig"; sourceTree = "<group>"; };
-		70259726851AF118ED06DA18 /* Pods-JAAKFaceDetector.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JAAKFaceDetector.release.xcconfig"; path = "Target Support Files/Pods-JAAKFaceDetector/Pods-JAAKFaceDetector.release.xcconfig"; sourceTree = "<group>"; };
-		8AF9E3BF2E1EFDB700EEA8B3 /* JAAKFaceDetector.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JAAKFaceDetector.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		8AF9E3C92E1EFDB800EEA8B3 /* JAAKFaceDetectorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JAAKFaceDetectorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		05F98E96E7609414797EF5AB /* Pods_JAAKVisage.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_JAAKVisage.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		347DAC98A3729EADCE1929DE /* Pods-JAAKVisageTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JAAKVisageTests.debug.xcconfig"; path = "Target Support Files/Pods-JAAKVisageTests/Pods-JAAKVisageTests.debug.xcconfig"; sourceTree = "<group>"; };
+		423C54339360C5284CF8E791 /* Pods_JAAKVisageTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_JAAKVisageTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		800584AFBCD240B44B5851E5 /* Pods-JAAKVisageTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JAAKVisageTests.release.xcconfig"; path = "Target Support Files/Pods-JAAKVisageTests/Pods-JAAKVisageTests.release.xcconfig"; sourceTree = "<group>"; };
+		8AF9E3BF2E1EFDB700EEA8B3 /* JAAKVisage.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = JAAKVisage.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		8AF9E3C92E1EFDB800EEA8B3 /* JAAKVisageTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JAAKVisageTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8AF9E3FE2E1F27BE00EEA8B3 /* Podfile */ = {isa = PBXFileReference; lastKnownFileType = text; path = Podfile; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
-		FAF511BC90E41E7710D6B7B8 /* Pods_JAAKFaceDetector.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_JAAKFaceDetector.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		C2EF94E4FBB5DF43F883E05C /* Pods-JAAKVisage.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JAAKVisage.release.xcconfig"; path = "Target Support Files/Pods-JAAKVisage/Pods-JAAKVisage.release.xcconfig"; sourceTree = "<group>"; };
+		EC0215673A172D611C173B9E /* Pods-JAAKVisage.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-JAAKVisage.debug.xcconfig"; path = "Target Support Files/Pods-JAAKVisage/Pods-JAAKVisage.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		8AF9E3D12E1EFDB800EEA8B3 /* Exceptions for "JAAKFaceDetector" folder in "JAAKFaceDetector" target */ = {
+		8AF9E3D12E1EFDB800EEA8B3 /* Exceptions for "JAAKVisage" folder in "JAAKVisage" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			publicHeaders = (
-				JAAKFaceDetector.h,
+				JAAKVisage.h,
 			);
-			target = 8AF9E3BE2E1EFDB700EEA8B3 /* JAAKFaceDetector */;
+			target = 8AF9E3BE2E1EFDB700EEA8B3 /* JAAKVisage */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		8AF9E3C12E1EFDB700EEA8B3 /* JAAKFaceDetector */ = {
+		8AF9E3C12E1EFDB700EEA8B3 /* JAAKVisage */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				8AF9E3D12E1EFDB800EEA8B3 /* Exceptions for "JAAKFaceDetector" folder in "JAAKFaceDetector" target */,
+				8AF9E3D12E1EFDB800EEA8B3 /* Exceptions for "JAAKVisage" folder in "JAAKVisage" target */,
 			);
-			path = JAAKFaceDetector;
+			path = JAAKVisage;
 			sourceTree = "<group>";
 		};
-		8AF9E3CD2E1EFDB800EEA8B3 /* JAAKFaceDetectorTests */ = {
+		8AF9E3CD2E1EFDB800EEA8B3 /* JAAKVisageTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = JAAKFaceDetectorTests;
+			exceptions = (
+			);
+			path = JAAKVisageTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -66,7 +68,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7280410147DDA82FA336E964 /* Pods_JAAKFaceDetector.framework in Frameworks */,
+				377DCBC653636BA434F1A1B2 /* Pods_JAAKVisage.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -74,51 +76,51 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8AF9E3CA2E1EFDB800EEA8B3 /* JAAKFaceDetector.framework in Frameworks */,
-				2E1478BC0098F0FCE772DC0D /* Pods_JAAKFaceDetectorTests.framework in Frameworks */,
+				8AF9E3CA2E1EFDB800EEA8B3 /* JAAKVisage.framework in Frameworks */,
+				F614651164ADE83E057EF2E6 /* Pods_JAAKVisageTests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		8AA2C875A70BC5F312C57C7B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				05F98E96E7609414797EF5AB /* Pods_JAAKVisage.framework */,
+				423C54339360C5284CF8E791 /* Pods_JAAKVisageTests.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		8AF9E3B52E1EFDB700EEA8B3 = {
 			isa = PBXGroup;
 			children = (
 				8AF9E3FE2E1F27BE00EEA8B3 /* Podfile */,
-				8AF9E3C12E1EFDB700EEA8B3 /* JAAKFaceDetector */,
-				8AF9E3CD2E1EFDB800EEA8B3 /* JAAKFaceDetectorTests */,
+				8AF9E3C12E1EFDB700EEA8B3 /* JAAKVisage */,
+				8AF9E3CD2E1EFDB800EEA8B3 /* JAAKVisageTests */,
 				8AF9E3C02E1EFDB700EEA8B3 /* Products */,
 				E87255BD4C3D4FBC04B20F3A /* Pods */,
-				E4EC645A95223A97BB28CA64 /* Frameworks */,
+				8AA2C875A70BC5F312C57C7B /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
 		8AF9E3C02E1EFDB700EEA8B3 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				8AF9E3BF2E1EFDB700EEA8B3 /* JAAKFaceDetector.framework */,
-				8AF9E3C92E1EFDB800EEA8B3 /* JAAKFaceDetectorTests.xctest */,
+				8AF9E3BF2E1EFDB700EEA8B3 /* JAAKVisage.framework */,
+				8AF9E3C92E1EFDB800EEA8B3 /* JAAKVisageTests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		E4EC645A95223A97BB28CA64 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				FAF511BC90E41E7710D6B7B8 /* Pods_JAAKFaceDetector.framework */,
-				3F83BA306279D391EFF31A30 /* Pods_JAAKFaceDetectorTests.framework */,
-			);
-			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		E87255BD4C3D4FBC04B20F3A /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				05258EB8858B5665B4680F66 /* Pods-JAAKFaceDetector.debug.xcconfig */,
-				70259726851AF118ED06DA18 /* Pods-JAAKFaceDetector.release.xcconfig */,
-				6D5DB8B0F38F9F496812610E /* Pods-JAAKFaceDetectorTests.debug.xcconfig */,
-				3D006FC1F8AAC8C4E95D3AFC /* Pods-JAAKFaceDetectorTests.release.xcconfig */,
+				EC0215673A172D611C173B9E /* Pods-JAAKVisage.debug.xcconfig */,
+				C2EF94E4FBB5DF43F883E05C /* Pods-JAAKVisage.release.xcconfig */,
+				347DAC98A3729EADCE1929DE /* Pods-JAAKVisageTests.debug.xcconfig */,
+				800584AFBCD240B44B5851E5 /* Pods-JAAKVisageTests.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -136,11 +138,11 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		8AF9E3BE2E1EFDB700EEA8B3 /* JAAKFaceDetector */ = {
+		8AF9E3BE2E1EFDB700EEA8B3 /* JAAKVisage */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 8AF9E3D22E1EFDB800EEA8B3 /* Build configuration list for PBXNativeTarget "JAAKFaceDetector" */;
+			buildConfigurationList = 8AF9E3D22E1EFDB800EEA8B3 /* Build configuration list for PBXNativeTarget "JAAKVisage" */;
 			buildPhases = (
-				480CB243665D71DAB96DE0E6 /* [CP] Check Pods Manifest.lock */,
+				8E6BFAEE1F2DEF55C0390050 /* [CP] Check Pods Manifest.lock */,
 				8AF9E3BA2E1EFDB700EEA8B3 /* Headers */,
 				8AF9E3BB2E1EFDB700EEA8B3 /* Sources */,
 				8AF9E3BC2E1EFDB700EEA8B3 /* Frameworks */,
@@ -151,18 +153,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				8AF9E3C12E1EFDB700EEA8B3 /* JAAKFaceDetector */,
+				8AF9E3C12E1EFDB700EEA8B3 /* JAAKVisage */,
 			);
-			name = JAAKFaceDetector;
-			productName = JAAKFaceDetector;
-			productReference = 8AF9E3BF2E1EFDB700EEA8B3 /* JAAKFaceDetector.framework */;
+			name = JAAKVisage;
+			productName = JAAKVisage;
+			productReference = 8AF9E3BF2E1EFDB700EEA8B3 /* JAAKVisage.framework */;
 			productType = "com.apple.product-type.framework";
 		};
-		8AF9E3C82E1EFDB800EEA8B3 /* JAAKFaceDetectorTests */ = {
+		8AF9E3C82E1EFDB800EEA8B3 /* JAAKVisageTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 8AF9E3D72E1EFDB800EEA8B3 /* Build configuration list for PBXNativeTarget "JAAKFaceDetectorTests" */;
+			buildConfigurationList = 8AF9E3D72E1EFDB800EEA8B3 /* Build configuration list for PBXNativeTarget "JAAKVisageTests" */;
 			buildPhases = (
-				F6E7E68CB7BC7EBD1BCCE3FE /* [CP] Check Pods Manifest.lock */,
+				5F823A830C8F0F3B8410AB4E /* [CP] Check Pods Manifest.lock */,
 				8AF9E3C52E1EFDB800EEA8B3 /* Sources */,
 				8AF9E3C62E1EFDB800EEA8B3 /* Frameworks */,
 				8AF9E3C72E1EFDB800EEA8B3 /* Resources */,
@@ -173,11 +175,11 @@
 				8AF9E3CC2E1EFDB800EEA8B3 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				8AF9E3CD2E1EFDB800EEA8B3 /* JAAKFaceDetectorTests */,
+				8AF9E3CD2E1EFDB800EEA8B3 /* JAAKVisageTests */,
 			);
-			name = JAAKFaceDetectorTests;
-			productName = JAAKFaceDetectorTests;
-			productReference = 8AF9E3C92E1EFDB800EEA8B3 /* JAAKFaceDetectorTests.xctest */;
+			name = JAAKVisageTests;
+			productName = JAAKVisageTests;
+			productReference = 8AF9E3C92E1EFDB800EEA8B3 /* JAAKVisageTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -198,7 +200,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 8AF9E3B92E1EFDB700EEA8B3 /* Build configuration list for PBXProject "JAAKFaceDetector" */;
+			buildConfigurationList = 8AF9E3B92E1EFDB700EEA8B3 /* Build configuration list for PBXProject "JAAKVisage" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -212,8 +214,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				8AF9E3BE2E1EFDB700EEA8B3 /* JAAKFaceDetector */,
-				8AF9E3C82E1EFDB800EEA8B3 /* JAAKFaceDetectorTests */,
+				8AF9E3BE2E1EFDB700EEA8B3 /* JAAKVisage */,
+				8AF9E3C82E1EFDB800EEA8B3 /* JAAKVisageTests */,
 			);
 		};
 /* End PBXProject section */
@@ -237,7 +239,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		480CB243665D71DAB96DE0E6 /* [CP] Check Pods Manifest.lock */ = {
+		5F823A830C8F0F3B8410AB4E /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -252,14 +254,14 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-JAAKFaceDetector-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-JAAKVisageTests-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		F6E7E68CB7BC7EBD1BCCE3FE /* [CP] Check Pods Manifest.lock */ = {
+		8E6BFAEE1F2DEF55C0390050 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -274,7 +276,7 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-JAAKFaceDetectorTests-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-JAAKVisage-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -303,7 +305,7 @@
 /* Begin PBXTargetDependency section */
 		8AF9E3CC2E1EFDB800EEA8B3 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 8AF9E3BE2E1EFDB700EEA8B3 /* JAAKFaceDetector */;
+			target = 8AF9E3BE2E1EFDB700EEA8B3 /* JAAKVisage */;
 			targetProxy = 8AF9E3CB2E1EFDB800EEA8B3 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -311,7 +313,7 @@
 /* Begin XCBuildConfiguration section */
 		8AF9E3D32E1EFDB800EEA8B3 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 05258EB8858B5665B4680F66 /* Pods-JAAKFaceDetector.debug.xcconfig */;
+			baseConfigurationReference = EC0215673A172D611C173B9E /* Pods-JAAKVisage.debug.xcconfig */;
 			buildSettings = {
 				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
 				CODE_SIGN_STYLE = Automatic;
@@ -333,7 +335,7 @@
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
-				PRODUCT_BUNDLE_IDENTIFIER = ai.jaak.JAAKFaceDetector;
+				PRODUCT_BUNDLE_IDENTIFIER = ai.jaak.JAAKVisage;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -345,7 +347,7 @@
 		};
 		8AF9E3D42E1EFDB800EEA8B3 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 70259726851AF118ED06DA18 /* Pods-JAAKFaceDetector.release.xcconfig */;
+			baseConfigurationReference = C2EF94E4FBB5DF43F883E05C /* Pods-JAAKVisage.release.xcconfig */;
 			buildSettings = {
 				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
 				CODE_SIGN_STYLE = Automatic;
@@ -367,7 +369,7 @@
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
-				PRODUCT_BUNDLE_IDENTIFIER = ai.jaak.JAAKFaceDetector;
+				PRODUCT_BUNDLE_IDENTIFIER = ai.jaak.JAAKVisage;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -504,13 +506,13 @@
 		};
 		8AF9E3D82E1EFDB800EEA8B3 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 6D5DB8B0F38F9F496812610E /* Pods-JAAKFaceDetectorTests.debug.xcconfig */;
+			baseConfigurationReference = 347DAC98A3729EADCE1929DE /* Pods-JAAKVisageTests.debug.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ai.jaak.JAAKFaceDetectorTests;
+				PRODUCT_BUNDLE_IDENTIFIER = ai.jaak.JAAKVisageTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -520,13 +522,13 @@
 		};
 		8AF9E3D92E1EFDB800EEA8B3 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 3D006FC1F8AAC8C4E95D3AFC /* Pods-JAAKFaceDetectorTests.release.xcconfig */;
+			baseConfigurationReference = 800584AFBCD240B44B5851E5 /* Pods-JAAKVisageTests.release.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ai.jaak.JAAKFaceDetectorTests;
+				PRODUCT_BUNDLE_IDENTIFIER = ai.jaak.JAAKVisageTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -537,7 +539,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		8AF9E3B92E1EFDB700EEA8B3 /* Build configuration list for PBXProject "JAAKFaceDetector" */ = {
+		8AF9E3B92E1EFDB700EEA8B3 /* Build configuration list for PBXProject "JAAKVisage" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8AF9E3D52E1EFDB800EEA8B3 /* Debug */,
@@ -546,7 +548,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		8AF9E3D22E1EFDB800EEA8B3 /* Build configuration list for PBXNativeTarget "JAAKFaceDetector" */ = {
+		8AF9E3D22E1EFDB800EEA8B3 /* Build configuration list for PBXNativeTarget "JAAKVisage" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8AF9E3D32E1EFDB800EEA8B3 /* Debug */,
@@ -555,7 +557,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		8AF9E3D72E1EFDB800EEA8B3 /* Build configuration list for PBXNativeTarget "JAAKFaceDetectorTests" */ = {
+		8AF9E3D72E1EFDB800EEA8B3 /* Build configuration list for PBXNativeTarget "JAAKVisageTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8AF9E3D82E1EFDB800EEA8B3 /* Debug */,

@@ -32,7 +32,7 @@ internal class JAAKInstructionView: UIView {
     
     // MARK: - Properties
     
-    private let configuration: JAAKFaceDetectorConfiguration
+    private let configuration: JAAKVisageConfiguration
     private var currentState: InstructionState = .hidden
     private var instructionSteps: [InstructionStep] = []
     private var currentStepIndex: Int = 0
@@ -73,7 +73,7 @@ internal class JAAKInstructionView: UIView {
     
     // MARK: - Initialization
     
-    init(configuration: JAAKFaceDetectorConfiguration) {
+    init(configuration: JAAKVisageConfiguration) {
         self.configuration = configuration
         super.init(frame: .zero)
         setupUI()
@@ -81,7 +81,7 @@ internal class JAAKInstructionView: UIView {
     }
     
     required init?(coder: NSCoder) {
-        self.configuration = JAAKFaceDetectorConfiguration()
+        self.configuration = JAAKVisageConfiguration()
         super.init(coder: coder)
         setupUI()
         setupInstructionSteps()
@@ -1022,8 +1022,8 @@ internal class JAAKInstructionView: UIView {
         // Get the bundle for this framework/library
         let frameworkBundle = Bundle(for: type(of: self))
         
-        // Try loading from resource bundle (JAAKFaceDetector.bundle)
-        if let resourceBundleURL = frameworkBundle.url(forResource: "JAAKFaceDetector", withExtension: "bundle"),
+        // Try loading from resource bundle (JAAKVisage.bundle)
+        if let resourceBundleURL = frameworkBundle.url(forResource: "JAAKVisage", withExtension: "bundle"),
            let resourceBundle = Bundle(url: resourceBundleURL),
            let image = UIImage(named: named, in: resourceBundle, compatibleWith: nil) {
             print("✅ Loaded icon '\(named)' from resource bundle")
@@ -1053,9 +1053,9 @@ internal class JAAKInstructionView: UIView {
         
         // Try absolute paths for development
         let developmentPaths = [
-            "/Users/diego.bruno/Development/iOS/JAAKFaceDetector/JAAKFaceDetector/Resources/\(named).png",
-            "/Users/diego.bruno/Development/iOS/JAAKFaceDetector/JAAKFaceDetector/Assets/\(named).png",
-            "/Users/diego.bruno/Development/iOS/JAAKFaceDetector/JAAKFaceDetector/\(named).png"
+            "/Users/diego.bruno/Development/iOS/JAAKVisage/JAAKVisage/Resources/\(named).png",
+            "/Users/diego.bruno/Development/iOS/JAAKVisage/JAAKVisage/Assets/\(named).png",
+            "/Users/diego.bruno/Development/iOS/JAAKVisage/JAAKVisage/\(named).png"
         ]
         
         for devPath in developmentPaths {
@@ -1082,7 +1082,7 @@ internal class JAAKInstructionView: UIView {
         print("  - Framework bundle identifier: \(frameworkBundle.bundleIdentifier ?? "unknown")")
         
         // Debug: List available resources
-        if let resourceBundleURL = frameworkBundle.url(forResource: "JAAKFaceDetector", withExtension: "bundle") {
+        if let resourceBundleURL = frameworkBundle.url(forResource: "JAAKVisage", withExtension: "bundle") {
             print("  - Resource bundle found at: \(resourceBundleURL)")
         } else {
             print("  - No resource bundle found")

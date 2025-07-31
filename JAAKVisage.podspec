@@ -1,9 +1,9 @@
 Pod::Spec.new do |spec|
-  spec.name          = "JAAKFaceDetector"
+  spec.name          = "JAAKVisage"
   spec.version       = "1.0.0"
   spec.summary       = "AI-powered face detection and recording library for iOS using MediaPipe BlazeFace"
   spec.description   = <<-DESC
-                       JAAKFaceDetector is an advanced face detection library that provides:
+                       JAAKVisage is an advanced face detection library that provides:
                        - Real-time face detection using MediaPipe BlazeFace
                        - Auto-recording with quality analysis
                        - Face quality metrics and validation
@@ -19,13 +19,13 @@ Pod::Spec.new do |spec|
   spec.platform      = :ios, "12.0"
   spec.swift_version = "5.0"
   
-  spec.source        = { :http => "https://github.com/BrunoSolis5/jaak-face-detector-ios/releases/download/v#{spec.version}/JAAKFaceDetector-#{spec.version}.zip" }
+  spec.source        = { :http => "https://github.com/BrunoSolis5/jaak-face-detector-ios/releases/download/v#{spec.version}/JAAKVisage-#{spec.version}.zip" }
   
-  spec.source_files  = "JAAKFaceDetector/**/*.swift"
-  spec.exclude_files = "JAAKFaceDetector/Info.plist"
+  spec.source_files  = "JAAKVisage/**/*.swift"
+  spec.exclude_files = "JAAKVisage/Info.plist"
   
   spec.resource_bundles = {
-    'JAAKFaceDetector' => ['JAAKFaceDetector/Resources/**/*']
+    'JAAKVisage' => ['JAAKVisage/Resources/**/*']
   }
   
   spec.frameworks = 'UIKit', 'AVFoundation', 'Vision', 'CoreML'

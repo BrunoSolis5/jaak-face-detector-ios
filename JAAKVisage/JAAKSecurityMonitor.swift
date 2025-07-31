@@ -6,14 +6,14 @@ internal class JAAKSecurityMonitor {
     
     // MARK: - Properties
     
-    private let configuration: JAAKFaceDetectorConfiguration
+    private let configuration: JAAKVisageConfiguration
     private var monitoringTimer: Timer?
     
     weak var delegate: JAAKSecurityMonitorDelegate?
     
     // MARK: - Initialization
     
-    init(configuration: JAAKFaceDetectorConfiguration) {
+    init(configuration: JAAKVisageConfiguration) {
         self.configuration = configuration
     }
     

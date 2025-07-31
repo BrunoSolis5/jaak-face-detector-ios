@@ -10,12 +10,12 @@ internal class JAAKVideoRecorder: NSObject {
     private var recordingStartTime: Date?
     private var isCurrentlyRecording = false
     
-    private var configuration: JAAKFaceDetectorConfiguration
+    private var configuration: JAAKVisageConfiguration
     weak var delegate: JAAKVideoRecorderDelegate?
     
     // MARK: - Initialization
     
-    init(configuration: JAAKFaceDetectorConfiguration) {
+    init(configuration: JAAKVisageConfiguration) {
         self.configuration = configuration
         super.init()
     }
@@ -26,9 +26,9 @@ internal class JAAKVideoRecorder: NSObject {
     /// - Parameters:
     ///   - cameraManager: camera manager instance
     ///   - completion: completion handler with result
-    func startRecording(with cameraManager: JAAKCameraManager, completion: @escaping (Result<JAAKFileResult, JAAKFaceDetectorError>) -> Void) {
+    func startRecording(with cameraManager: JAAKCameraManager, completion: @escaping (Result<JAAKFileResult, JAAKVisageError>) -> Void) {
         guard !isCurrentlyRecording else {
-            let error = JAAKFaceDetectorError(
+            let error = JAAKVisageError(
                 label: "Grabación ya en progreso",
                 code: "RECORDING_IN_PROGRESS"
             )
@@ -100,7 +100,7 @@ internal class JAAKVideoRecorder: NSObject {
         return documentsPath.appendingPathComponent(fileName)
     }
     
-    private func startRecordingTimer(cameraManager: JAAKCameraManager, completion: @escaping (Result<JAAKFileResult, JAAKFaceDetectorError>) -> Void) {
+    private func startRecordingTimer(cameraManager: JAAKCameraManager, completion: @escaping (Result<JAAKFileResult, JAAKVisageError>) -> Void) {
         recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             
@@ -124,7 +124,7 @@ internal class JAAKVideoRecorder: NSObject {
         recordingTimer = nil
     }
     
-    private var pendingCompletion: ((Result<JAAKFileResult, JAAKFaceDetectorError>) -> Void)?
+    private var pendingCompletion: ((Result<JAAKFileResult, JAAKVisageError>) -> Void)?
     
     /// Handle successful video recording completion
     /// - Parameter outputURL: URL of the recorded video file
@@ -150,7 +150,7 @@ internal class JAAKVideoRecorder: NSObject {
             try? FileManager.default.removeItem(at: outputURL)
             
         } catch {
-            let detectorError = JAAKFaceDetectorError(
+            let detectorError = JAAKVisageError(
                 label: "Error al procesar video grabado",
                 code: "VIDEO_PROCESSING_FAILED",
                 details: error
@@ -162,7 +162,7 @@ internal class JAAKVideoRecorder: NSObject {
     
     /// Handle video recording error
     /// - Parameter error: the error that occurred
-    func handleRecordingError(_ error: JAAKFaceDetectorError) {
+    func handleRecordingError(_ error: JAAKVisageError) {
         pendingCompletion?(.failure(error))
         pendingCompletion = nil
         
@@ -173,7 +173,7 @@ internal class JAAKVideoRecorder: NSObject {
     
     /// Update configuration
     /// - Parameter newConfiguration: new video recorder configuration
-    func updateConfiguration(_ newConfiguration: JAAKFaceDetectorConfiguration) {
+    func updateConfiguration(_ newConfiguration: JAAKVisageConfiguration) {
         self.configuration = newConfiguration
         print("✅ [VideoRecorder] Configuration updated")
     }
@@ -185,5 +185,5 @@ protocol JAAKVideoRecorderDelegate: AnyObject {
     func videoRecorder(_ recorder: JAAKVideoRecorder, didStartRecording outputURL: URL)
     func videoRecorder(_ recorder: JAAKVideoRecorder, didUpdateProgress progress: Float)
     func videoRecorder(_ recorder: JAAKVideoRecorder, didFinishRecording fileResult: JAAKFileResult)
-    func videoRecorder(_ recorder: JAAKVideoRecorder, didFailWithError error: JAAKFaceDetectorError)
+    func videoRecorder(_ recorder: JAAKVideoRecorder, didFailWithError error: JAAKVisageError)
 }

@@ -32,17 +32,17 @@ public struct JAAKFaceDetectionMessage {
     }
 }
 
-/// Delegate protocol for JAAKFaceDetector events
-public protocol JAAKFaceDetectorSDKDelegate: AnyObject {
+/// Delegate protocol for JAAKVisage events
+public protocol JAAKVisageSDKDelegate: AnyObject {
     /// Called when the detector status changes
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didUpdateStatus status: JAAKFaceDetectorStatus)
+    func faceDetector(_ detector: JAAKVisageSDK, didUpdateStatus status: JAAKVisageStatus)
     
     /// Called when an error occurs
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAKFaceDetectorError)
+    func faceDetector(_ detector: JAAKVisageSDK, didEncounterError error: JAAKVisageError)
     
     /// Called when a file is captured (video)
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didCaptureFile result: JAAKFileResult)
+    func faceDetector(_ detector: JAAKVisageSDK, didCaptureFile result: JAAKFileResult)
     
     /// Called when face detection provides feedback
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didDetectFace message: JAAKFaceDetectionMessage)
+    func faceDetector(_ detector: JAAKVisageSDK, didDetectFace message: JAAKFaceDetectionMessage)
 }

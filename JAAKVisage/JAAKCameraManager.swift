@@ -13,7 +13,7 @@ internal class JAAKCameraManager: NSObject {
     private var audioOutput: AVCaptureAudioDataOutput?
     
     // Configuration storage
-    private var currentConfiguration: JAAKFaceDetectorConfiguration?
+    private var currentConfiguration: JAAKVisageConfiguration?
     
     // Recording outputs - use different approaches based on microphone setting
     private var assetWriter: AVAssetWriter?
@@ -34,8 +34,8 @@ internal class JAAKCameraManager: NSObject {
     
     /// Setup capture session with given configuration
     /// - Parameter configuration: detector configuration
-    /// - Throws: JAAKFaceDetectorError if setup fails
-    func setupCaptureSession(with configuration: JAAKFaceDetectorConfiguration) throws {
+    /// - Throws: JAAKVisageError if setup fails
+    func setupCaptureSession(with configuration: JAAKVisageConfiguration) throws {
         print("🔧 [CameraManager] Setting up capture session...")
         // Camera validation removed for simplicity
         
@@ -165,8 +165,8 @@ internal class JAAKCameraManager: NSObject {
     /// Toggle camera between front and back
     /// - Parameter position: new camera position
     /// - Parameter configuration: detector configuration
-    /// - Throws: JAAKFaceDetectorError if toggle fails
-    func toggleCamera(to position: AVCaptureDevice.Position, configuration: JAAKFaceDetectorConfiguration) throws {
+    /// - Throws: JAAKVisageError if toggle fails
+    func toggleCamera(to position: AVCaptureDevice.Position, configuration: JAAKVisageConfiguration) throws {
         print("🔄 [CameraManager] Toggling camera to position: \(position)")
         
         // Stop any active recording since camera change may affect recording state
@@ -357,12 +357,12 @@ internal class JAAKCameraManager: NSObject {
     
     // MARK: - Private Methods
     
-    private func setupCameraInput(position: AVCaptureDevice.Position, configuration: JAAKFaceDetectorConfiguration) throws {
+    private func setupCameraInput(position: AVCaptureDevice.Position, configuration: JAAKVisageConfiguration) throws {
         print("📷 [CameraManager] Setting up camera input for position: \(position)")
         // Get camera device for specified position (validation removed)
         guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position) else {
             print("❌ [CameraManager] No camera device found for position: \(position)")
-            throw JAAKFaceDetectorError(
+            throw JAAKVisageError(
                 label: "No camera device found for position",
                 code: "NO_CAMERA_FOR_POSITION"
             )
@@ -378,13 +378,13 @@ internal class JAAKCameraManager: NSObject {
                 print("✅ [CameraManager] Camera input added successfully")
             } else {
                 print("❌ [CameraManager] Cannot add camera input to session")
-                throw JAAKFaceDetectorError(
+                throw JAAKVisageError(
                     label: "Cannot add camera input",
                     code: "CAMERA_INPUT_FAILED"
                 )
             }
         } catch {
-            throw JAAKFaceDetectorError(
+            throw JAAKVisageError(
                 label: "Failed to create camera input",
                 code: "CAMERA_INPUT_CREATION_FAILED",
                 details: error
@@ -394,7 +394,7 @@ internal class JAAKCameraManager: NSObject {
     
     private func setupMicrophoneInput() throws {
         guard let microphone = AVCaptureDevice.default(for: .audio) else {
-            throw JAAKFaceDetectorError(
+            throw JAAKVisageError(
                 label: "Microphone device not found",
                 code: "MICROPHONE_DEVICE_NOT_FOUND"
             )
@@ -406,13 +406,13 @@ internal class JAAKCameraManager: NSObject {
                 captureSession.addInput(input)
                 audioInput = input
             } else {
-                throw JAAKFaceDetectorError(
+                throw JAAKVisageError(
                     label: "Cannot add microphone input",
                     code: "MICROPHONE_INPUT_FAILED"
                 )
             }
         } catch {
-            throw JAAKFaceDetectorError(
+            throw JAAKVisageError(
                 label: "Failed to create microphone input",
                 code: "MICROPHONE_INPUT_CREATION_FAILED",
                 details: error
@@ -432,14 +432,14 @@ internal class JAAKCameraManager: NSObject {
             audioOutput = output
             print("✅ [CameraManager] Audio output added successfully")
         } else {
-            throw JAAKFaceDetectorError(
+            throw JAAKVisageError(
                 label: "Cannot add audio output",
                 code: "AUDIO_OUTPUT_FAILED"
             )
         }
     }
     
-    private func setupVideoOutput(with configuration: JAAKFaceDetectorConfiguration) throws {
+    private func setupVideoOutput(with configuration: JAAKVisageConfiguration) throws {
         print("📹 [CameraManager] Setting up video output following MediaPipe pattern...")
         let output = AVCaptureVideoDataOutput()
         
@@ -469,7 +469,7 @@ internal class JAAKCameraManager: NSObject {
             
         } else {
             print("❌ [CameraManager] Cannot add video output to session")
-            throw JAAKFaceDetectorError(
+            throw JAAKVisageError(
                 label: "Cannot add video output",
                 code: "VIDEO_OUTPUT_FAILED"
             )
@@ -576,7 +576,7 @@ extension JAAKCameraManager {
                     print("✅ [CameraManager] AVAssetWriter setup completed")
                 } catch {
                     print("❌ [CameraManager] Failed to setup AVAssetWriter: \(error)")
-                    let detectorError = JAAKFaceDetectorError(
+                    let detectorError = JAAKVisageError(
                         label: "Failed to setup video recording",
                         code: "ASSET_WRITER_SETUP_FAILED",
                         details: error
@@ -629,7 +629,7 @@ extension JAAKCameraManager {
     
     private func setupAssetWriter(outputURL: URL) throws {
         guard let dimensions = videoDimensions else {
-            throw JAAKFaceDetectorError(
+            throw JAAKVisageError(
                 label: "Video dimensions not available",
                 code: "VIDEO_DIMENSIONS_UNAVAILABLE"
             )
@@ -668,7 +668,7 @@ extension JAAKCameraManager {
         // Add video input to asset writer
         guard let assetWriter = assetWriter,
               let videoWriterInput = videoWriterInput else {
-            throw JAAKFaceDetectorError(
+            throw JAAKVisageError(
                 label: "Asset writer or video input is nil",
                 code: "ASSET_WRITER_NIL"
             )
@@ -677,7 +677,7 @@ extension JAAKCameraManager {
         if assetWriter.canAdd(videoWriterInput) {
             assetWriter.add(videoWriterInput)
         } else {
-            throw JAAKFaceDetectorError(
+            throw JAAKVisageError(
                 label: "Cannot add video input to asset writer",
                 code: "VIDEO_INPUT_ADD_FAILED"
             )
@@ -728,7 +728,7 @@ extension JAAKCameraManager {
         
         // Start writing
         if !assetWriter.startWriting() {
-            throw JAAKFaceDetectorError(
+            throw JAAKVisageError(
                 label: "Failed to start asset writer",
                 code: "ASSET_WRITER_START_FAILED"
             )
@@ -758,7 +758,7 @@ extension JAAKCameraManager {
                     self?.delegate?.cameraManager(self!, didFinishRecordingTo: outputURL)
                 } else {
                     print("❌ [CameraManager] Video recording failed: \(assetWriter.error?.localizedDescription ?? "Unknown error")")
-                    let error = JAAKFaceDetectorError(
+                    let error = JAAKVisageError(
                         label: "Video recording failed",
                         code: "VIDEO_RECORDING_FAILED",
                         details: assetWriter.error
@@ -798,5 +798,5 @@ extension JAAKCameraManager {
 protocol JAAKCameraManagerDelegate: AnyObject {
     func cameraManager(_ manager: JAAKCameraManager, didOutput sampleBuffer: CMSampleBuffer)
     func cameraManager(_ manager: JAAKCameraManager, didFinishRecordingTo outputURL: URL)
-    func cameraManager(_ manager: JAAKCameraManager, didFailWithError error: JAAKFaceDetectorError)
+    func cameraManager(_ manager: JAAKCameraManager, didFailWithError error: JAAKVisageError)
 }

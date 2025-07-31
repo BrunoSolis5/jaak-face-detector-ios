@@ -1,8 +1,8 @@
-# JAAKFaceDetector
+# JAAKVisage
 
-[![CocoaPods](https://img.shields.io/cocoapods/v/JAAKFaceDetector.svg)](https://cocoapods.org/pods/JAAKFaceDetector)
-[![Platform](https://img.shields.io/cocoapods/p/JAAKFaceDetector.svg)](https://cocoapods.org/pods/JAAKFaceDetector)
-[![License](https://img.shields.io/cocoapods/l/JAAKFaceDetector.svg)](https://github.com/BrunoSolis5/jaak-face-detector-ios/blob/main/LICENSE)
+[![CocoaPods](https://img.shields.io/cocoapods/v/JAAKVisage.svg)](https://cocoapods.org/pods/JAAKVisage)
+[![Platform](https://img.shields.io/cocoapods/p/JAAKVisage.svg)](https://cocoapods.org/pods/JAAKVisage)
+[![License](https://img.shields.io/cocoapods/l/JAAKVisage.svg)](https://github.com/BrunoSolis5/jaak-face-detector-ios/blob/main/LICENSE)
 
 AI-powered face detection and recording library for iOS using MediaPipe BlazeFace
 
@@ -48,7 +48,7 @@ AI-powered face detection and recording library for iOS using MediaPipe BlazeFac
 Agrega la siguiente línea a tu `Podfile`:
 
 ```ruby
-pod 'JAAKFaceDetector'
+pod 'JAAKVisage'
 ```
 
 Luego ejecuta:
@@ -84,7 +84,7 @@ Para versiones anteriores de Xcode o si prefieres editar el archivo directamente
 
 ```swift
 import SwiftUI
-import JAAKFaceDetector
+import JAAKVisage
 import AVKit
 
 struct ContentView: View {
@@ -165,12 +165,12 @@ class FaceDetectorManager: ObservableObject {
     @Published var isDetectionActive = false
     @Published var recordedVideos: [RecordedVideo] = []
     
-    private var faceDetectorUIView: JAAKFaceDetectorUIView?
-    private var configuration: JAAKFaceDetectorConfiguration
+    private var faceDetectorUIView: JAAKVisageUIView?
+    private var configuration: JAAKVisageConfiguration
     
     init() {
         // Configuración con los parámetros solicitados
-        configuration = JAAKFaceDetectorConfiguration()
+        configuration = JAAKVisageConfiguration()
         configuration.videoDuration = 4.0          // 4 segundos
         configuration.autoRecorder = true          // Auto grabación
         configuration.enableInstructions = true    // Instrucciones habilitadas
@@ -178,7 +178,7 @@ class FaceDetectorManager: ObservableObject {
         configuration.cameraPosition = .front      // Cámara frontal
     }
     
-    func setFaceDetectorUIView(_ view: JAAKFaceDetectorUIView) {
+    func setFaceDetectorUIView(_ view: JAAKVisageUIView) {
         self.faceDetectorUIView = view
         
         // Auto-iniciar si está configurado
@@ -232,8 +232,8 @@ class FaceDetectorManager: ObservableObject {
 }
 
 // MARK: - Face Detector Delegates
-extension FaceDetectorManager: JAAKFaceDetectorViewDelegate {
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didCaptureFile fileResult: JAAKFileResult) {
+extension FaceDetectorManager: JAAKVisageViewDelegate {
+    func faceDetectorView(_ view: JAAKVisageView, didCaptureFile fileResult: JAAKFileResult) {
         DispatchQueue.main.async {
             let video = RecordedVideo(
                 id: UUID(),
@@ -247,13 +247,13 @@ extension FaceDetectorManager: JAAKFaceDetectorViewDelegate {
         }
     }
     
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didEncounterError error: Error) {
+    func faceDetectorView(_ view: JAAKVisageView, didEncounterError error: Error) {
         DispatchQueue.main.async {
             self.statusMessage = "Error: \(error.localizedDescription)"
         }
     }
     
-    func faceDetectorView(status: JAAKFaceDetectorStatus) {
+    func faceDetectorView(status: JAAKVisageStatus) {
         DispatchQueue.main.async {
             switch status {
             case .loading:
@@ -290,14 +290,14 @@ extension FaceDetectorManager: JAAKFaceDetectorViewDelegate {
 struct FaceDetectorViewWrapper: UIViewRepresentable {
     let manager: FaceDetectorManager
     
-    func makeUIView(context: Context) -> JAAKFaceDetectorUIView {
-        let view = JAAKFaceDetectorUIView(configuration: manager.configuration)
+    func makeUIView(context: Context) -> JAAKVisageUIView {
+        let view = JAAKVisageUIView(configuration: manager.configuration)
         view.delegate = manager
         manager.setFaceDetectorUIView(view)
         return view
     }
     
-    func updateUIView(_ uiView: JAAKFaceDetectorUIView, context: Context) {}
+    func updateUIView(_ uiView: JAAKVisageUIView, context: Context) {}
 }
 
 // MARK: - Modelo de Video
@@ -386,21 +386,21 @@ struct VideoRowView: View {
 
 ```swift
 import UIKit
-import JAAKFaceDetector
+import JAAKVisage
 
 class ViewController: UIViewController {
-    private var detector: JAAKFaceDetectorSDK?
+    private var detector: JAAKVisageSDK?
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         // Configuración
-        let config = JAAKFaceDetectorConfiguration()
+        let config = JAAKVisageConfiguration()
         config.videoDuration = 4.0
         config.autoRecorder = true
         
         // Inicializar detector
-        detector = JAAKFaceDetectorSDK(configuration: config)
+        detector = JAAKVisageSDK(configuration: config)
         detector?.delegate = self
         
         // Crear vista
@@ -413,12 +413,12 @@ class ViewController: UIViewController {
     }
 }
 
-extension ViewController: JAAKFaceDetectorSDKDelegate {
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didCaptureFile result: JAAKFileResult) {
+extension ViewController: JAAKVisageSDKDelegate {
+    func faceDetector(_ detector: JAAKVisageSDK, didCaptureFile result: JAAKFileResult) {
         print("Video capturado: \(result.fileSize) bytes")
     }
     
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAKFaceDetectorError) {
+    func faceDetector(_ detector: JAAKVisageSDK, didEncounterError error: JAAKVisageError) {
         print("Error: \(error.localizedDescription)")
     }
 }
@@ -428,7 +428,7 @@ extension ViewController: JAAKFaceDetectorSDKDelegate {
 
 ```swift
 import SwiftUI
-import JAAKFaceDetector
+import JAAKVisage
 
 struct ContentView: View {
     @StateObject private var faceDetectorManager = FaceDetectorManager()
@@ -475,14 +475,14 @@ struct ContentView: View {
 struct FaceDetectorViewWrapper: UIViewRepresentable {
     let manager: FaceDetectorManager
     
-    func makeUIView(context: Context) -> JAAKFaceDetectorUIView {
-        let view = JAAKFaceDetectorUIView(configuration: manager.configuration)
+    func makeUIView(context: Context) -> JAAKVisageUIView {
+        let view = JAAKVisageUIView(configuration: manager.configuration)
         view.delegate = manager
         manager.setFaceDetectorUIView(view)
         return view
     }
     
-    func updateUIView(_ uiView: JAAKFaceDetectorUIView, context: Context) {}
+    func updateUIView(_ uiView: JAAKVisageUIView, context: Context) {}
 }
 ```
 
@@ -490,7 +490,7 @@ struct FaceDetectorViewWrapper: UIViewRepresentable {
 
 ```swift
 // Configuración personalizada
-var config = JAAKFaceDetectorConfiguration()
+var config = JAAKVisageConfiguration()
 config.videoDuration = 10.0
 config.autoRecorder = true
 config.cameraPosition = .front
@@ -505,7 +505,7 @@ config.faceTrackerStyles.invalidColor = .red
 
 ## Configuración
 
-### JAAKFaceDetectorConfiguration
+### JAAKVisageConfiguration
 
 | Parámetro | Tipo | Descripción | Valor por defecto |
 |-----------|------|-------------|-------------------|
@@ -527,7 +527,7 @@ config.faceTrackerStyles.invalidColor = .red
 
 ## Referencia de API
 
-### JAAKFaceDetectorSDK
+### JAAKVisageSDK
 
 Clase principal del SDK que coordina la detección facial y grabación de video.
 
@@ -535,7 +535,7 @@ Clase principal del SDK que coordina la detección facial y grabación de video.
 
 ```swift
 // Inicializar
-init(configuration: JAAKFaceDetectorConfiguration)
+init(configuration: JAAKVisageConfiguration)
 
 // Controlar detección
 func startDetection() throws
@@ -549,11 +549,11 @@ func recordVideo(completion: @escaping (Result<JAAKFileResult, Error>) -> Void)
 #### Delegates
 
 ```swift
-protocol JAAKFaceDetectorSDKDelegate {
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didUpdateStatus status: JAAKFaceDetectorStatus)
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didCaptureFile result: JAAKFileResult)
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAKFaceDetectorError)
-    func faceDetector(_ detector: JAAKFaceDetectorSDK, didDetectFace message: JAAKFaceDetectionMessage)
+protocol JAAKVisageSDKDelegate {
+    func faceDetector(_ detector: JAAKVisageSDK, didUpdateStatus status: JAAKVisageStatus)
+    func faceDetector(_ detector: JAAKVisageSDK, didCaptureFile result: JAAKFileResult)
+    func faceDetector(_ detector: JAAKVisageSDK, didEncounterError error: JAAKVisageError)
+    func faceDetector(_ detector: JAAKVisageSDK, didDetectFace message: JAAKFaceDetectionMessage)
 }
 ```
 
@@ -582,7 +582,7 @@ public struct JAAKFaceDetectionMessage {
 
 #### Estados del detector
 ```swift
-public enum JAAKFaceDetectorStatus: String {
+public enum JAAKVisageStatus: String {
     case loading = "loading"
     case loaded = "loaded"
     case running = "running"
@@ -599,7 +599,7 @@ public enum JAAKFaceDetectorStatus: String {
 ### Tipos de error
 
 ```swift
-public enum JAAKFaceDetectorErrorType: String {
+public enum JAAKVisageErrorType: String {
     case modelLoading = "model-loading"
     case cameraAccess = "camera-access"
     case faceDetection = "face-detection"
@@ -612,7 +612,7 @@ public enum JAAKFaceDetectorErrorType: String {
 ### Ejemplo de manejo de errores
 
 ```swift
-func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAKFaceDetectorError) {
+func faceDetector(_ detector: JAAKVisageSDK, didEncounterError error: JAAKVisageError) {
     switch error.code {
     case "camera-access":
         // Solicitar permisos de cámara
@@ -653,7 +653,7 @@ func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAK
 
 ## Licencia
 
-JAAKFaceDetector está disponible bajo la licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
+JAAKVisage está disponible bajo la licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
 
 ## Soporte
 

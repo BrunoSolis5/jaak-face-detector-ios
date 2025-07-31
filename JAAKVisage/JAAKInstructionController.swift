@@ -12,7 +12,7 @@ internal class JAAKInstructionController {
     
     // MARK: - Properties
     
-    private var configuration: JAAKFaceDetectorConfiguration
+    private var configuration: JAAKVisageConfiguration
     private let instructionView: JAAKInstructionView
     private var currentTrigger: InstructionTrigger?
     private var instructionTimer: Timer?
@@ -22,7 +22,7 @@ internal class JAAKInstructionController {
     
     // MARK: - Initialization
     
-    init(configuration: JAAKFaceDetectorConfiguration, instructionView: JAAKInstructionView) {
+    init(configuration: JAAKVisageConfiguration, instructionView: JAAKInstructionView) {
         self.configuration = configuration
         self.instructionView = instructionView
         
@@ -41,7 +41,7 @@ internal class JAAKInstructionController {
     
     /// Handle status changes for instruction updates
     /// - Parameter status: new detector status
-    func handleStatusChange(_ status: JAAKFaceDetectorStatus) {
+    func handleStatusChange(_ status: JAAKVisageStatus) {
         guard configuration.enableInstructions else { return }
         
         // Only show instructions for critical states, not for normal operation
@@ -58,7 +58,7 @@ internal class JAAKInstructionController {
     
     /// Handle errors for instruction updates
     /// - Parameter error: detector error
-    func handleError(_ error: JAAKFaceDetectorError) {
+    func handleError(_ error: JAAKVisageError) {
         guard configuration.enableInstructions else { return }
         
         showInstructionForTrigger(.error(error.label))
@@ -176,7 +176,7 @@ internal class JAAKInstructionController {
     
     /// Update configuration
     /// - Parameter newConfiguration: new instruction controller configuration
-    func updateConfiguration(_ newConfiguration: JAAKFaceDetectorConfiguration) {
+    func updateConfiguration(_ newConfiguration: JAAKVisageConfiguration) {
         self.configuration = newConfiguration
         print("✅ [InstructionController] Configuration updated")
     }

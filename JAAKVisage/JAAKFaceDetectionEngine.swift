@@ -22,11 +22,11 @@ internal class JAAKFaceDetectionEngine: NSObject {
     
     weak var delegate: JAAKFaceDetectionEngineDelegate?
     
-    private var configuration: JAAKFaceDetectorConfiguration
+    private var configuration: JAAKVisageConfiguration
     
     // MARK: - Initialization
     
-    init(configuration: JAAKFaceDetectorConfiguration) {
+    init(configuration: JAAKVisageConfiguration) {
         self.configuration = configuration
         self.qualityAnalyzer = JAAKFaceQualityAnalyzer()
         super.init()
@@ -35,7 +35,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
     // MARK: - Public Methods
     
     /// Load ML models for face detection
-    /// - Throws: JAAKFaceDetectorError if model loading fails
+    /// - Throws: JAAKVisageError if model loading fails
     func loadModels() throws {
         // Load MediaPipe BlazeFace model from Resources
         try loadMediaPipeModel()
@@ -85,7 +85,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
             try faceDetector.detectAsync(image: mpImage, timestampInMilliseconds: timestampMs)
             
         } catch {
-            let detectorError = JAAKFaceDetectorError(
+            let detectorError = JAAKVisageError(
                 label: "Falló la detección facial MediaPipe",
                 code: "MEDIAPIPE_DETECTION_FAILED",
                 details: error
@@ -115,8 +115,8 @@ internal class JAAKFaceDetectionEngine: NSObject {
             modelPath = bundle.path(forResource: "blaze_face_short_range", ofType: "tflite", inDirectory: "Models")
         }
         if modelPath == nil {
-            // Option 3: In JAAKFaceDetector resource bundle
-            modelPath = bundle.path(forResource: "blaze_face_short_range", ofType: "tflite", inDirectory: "JAAKFaceDetector.bundle/Models")
+            // Option 3: In JAAKVisage resource bundle
+            modelPath = bundle.path(forResource: "blaze_face_short_range", ofType: "tflite", inDirectory: "JAAKVisage.bundle/Models")
         }
         if modelPath == nil {
             // Option 4: Try main bundle
@@ -124,7 +124,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
         }
         
         guard let finalPath = modelPath else {
-            throw JAAKFaceDetectorError(
+            throw JAAKVisageError(
                 label: "Modelo MediaPipe BlazeFace no encontrado en ninguna ubicación esperada",
                 code: "MEDIAPIPE_MODEL_NOT_FOUND"
             )
@@ -145,7 +145,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
             faceDetector = try FaceDetector(options: options)
             
         } catch {
-            throw JAAKFaceDetectorError(
+            throw JAAKVisageError(
                 label: "Error al inicializar MediaPipe FaceDetector",
                 code: "MEDIAPIPE_INIT_FAILED",
                 details: error
@@ -525,7 +525,7 @@ internal class JAAKFaceDetectionEngine: NSObject {
     
     /// Update configuration
     /// - Parameter newConfiguration: new face detector configuration
-    func updateConfiguration(_ newConfiguration: JAAKFaceDetectorConfiguration) {
+    func updateConfiguration(_ newConfiguration: JAAKVisageConfiguration) {
         self.configuration = newConfiguration
         print("✅ [FaceDetectionEngine] Configuration updated")
     }
@@ -546,7 +546,7 @@ extension JAAKFaceDetectionEngine: FaceDetectorLiveStreamDelegate {
         
         if let error = error {
             print("❌ [FaceDetectionEngine] Live stream error: \(error)")
-            let detectorError = JAAKFaceDetectorError(
+            let detectorError = JAAKVisageError(
                 label: "Error en la detección de flujo en vivo MediaPipe",
                 code: "MEDIAPIPE_LIVE_STREAM_FAILED",
                 details: error
@@ -585,6 +585,6 @@ extension JAAKFaceDetectionEngine: FaceDetectorLiveStreamDelegate {
 protocol JAAKFaceDetectionEngineDelegate: AnyObject {
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didDetectFace message: JAAKFaceDetectionMessage, boundingBox: CGRect, videoNativeSize: CGSize)
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didDetectFaces detections: [Detection], sampleBuffer: CMSampleBuffer)
-    func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didFailWithError error: JAAKFaceDetectorError)
+    func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, didFailWithError error: JAAKVisageError)
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, shouldCancelRecording: Bool)
 }

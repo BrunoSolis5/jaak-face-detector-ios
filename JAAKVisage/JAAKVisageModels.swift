@@ -1,7 +1,7 @@
 import Foundation
 
-/// Status enumeration for JAAKFaceDetector component states
-public enum JAAKFaceDetectorStatus: String, CaseIterable {
+/// Status enumeration for JAAKVisage component states
+public enum JAAKVisageStatus: String, CaseIterable {
     case notLoaded = "not-loaded"
     case loading = "loading"
     case loaded = "loaded"
@@ -12,8 +12,8 @@ public enum JAAKFaceDetectorStatus: String, CaseIterable {
     case stopped = "stopped"
 }
 
-/// Error types for JAAKFaceDetector
-public enum JAAKFaceDetectorErrorType: String, CaseIterable {
+/// Error types for JAAKVisage
+public enum JAAKVisageErrorType: String, CaseIterable {
     case modelLoading = "model-loading"
     case cameraAccess = "camera-access"
     case faceDetection = "face-detection"
@@ -22,8 +22,8 @@ public enum JAAKFaceDetectorErrorType: String, CaseIterable {
     case deviceNotSupported = "device-not-supported"
 }
 
-/// Error structure for JAAKFaceDetector
-public struct JAAKFaceDetectorError: LocalizedError {
+/// Error structure for JAAKVisage
+public struct JAAKVisageError: LocalizedError {
     public let label: String
     public let code: String?
     public let details: Any?

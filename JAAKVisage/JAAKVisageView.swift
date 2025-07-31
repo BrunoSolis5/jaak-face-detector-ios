@@ -1,6 +1,6 @@
 //
-//  JAAKFaceDetectorView.swift
-//  JAAKFaceDetector
+//  JAAKVisageView.swift
+//  JAAKVisage
 //
 //  Created by Claude on 10/07/25.
 //
@@ -11,37 +11,37 @@ import AVFoundation
 
 /// SwiftUI view component that encapsulates the complete face detection functionality
 @available(iOS 13.0, *)
-public struct JAAKFaceDetectorView: UIViewRepresentable {
+public struct JAAKVisageView: UIViewRepresentable {
     
     // MARK: - Properties
     
     /// Configuration for the face detector
-    public let configuration: JAAKFaceDetectorConfiguration
+    public let configuration: JAAKVisageConfiguration
     
     /// Delegate to receive face detection events
-    public weak var delegate: JAAKFaceDetectorViewDelegate?
+    public weak var delegate: JAAKVisageViewDelegate?
     
     /// Internal face detector instance
-    private var faceDetector: JAAKFaceDetectorSDK?
+    private var faceDetector: JAAKVisageSDK?
     
     /// State tracking
     private var isSetup: Bool = false
     
     // MARK: - Initialization
     
-    /// Initialize JAAKFaceDetectorView with configuration
+    /// Initialize JAAKVisageView with configuration
     /// - Parameters:
     ///   - configuration: Configuration for face detection
     ///   - delegate: Delegate to receive events
-    public init(configuration: JAAKFaceDetectorConfiguration, delegate: JAAKFaceDetectorViewDelegate? = nil) {
+    public init(configuration: JAAKVisageConfiguration, delegate: JAAKVisageViewDelegate? = nil) {
         self.configuration = configuration
         self.delegate = delegate
     }
     
     // MARK: - UIViewRepresentable
     
-    public func makeUIView(context: Context) -> JAAKFaceDetectorUIView {
-        let view = JAAKFaceDetectorUIView()
+    public func makeUIView(context: Context) -> JAAKVisageUIView {
+        let view = JAAKVisageUIView()
         view.backgroundColor = UIColor.black
         
         // Setup face detector
@@ -50,7 +50,7 @@ public struct JAAKFaceDetectorView: UIViewRepresentable {
         return view
     }
     
-    public func updateUIView(_ uiView: JAAKFaceDetectorUIView, context: Context) {
+    public func updateUIView(_ uiView: JAAKVisageUIView, context: Context) {
         // Update only when necessary
         if !uiView.isSetup {
             setupFaceDetector(for: uiView)
@@ -58,7 +58,7 @@ public struct JAAKFaceDetectorView: UIViewRepresentable {
             // Check if configuration has changed and needs refresh
             if let currentDetector = uiView.faceDetector, 
                !configurationMatches(currentDetector.configuration, configuration) {
-                print("🔄 [JAAKFaceDetectorView] Configuration changed, recreating detector...")
+                print("🔄 [JAAKVisageView] Configuration changed, recreating detector...")
                 
                 // Stop current detector
                 currentDetector.stopDetection()
@@ -82,13 +82,13 @@ public struct JAAKFaceDetectorView: UIViewRepresentable {
     
     // MARK: - Private Methods
     
-    private func setupFaceDetector(for view: JAAKFaceDetectorUIView) {
+    private func setupFaceDetector(for view: JAAKVisageUIView) {
         guard !view.isSetup else { return }
         
-        print("🏗️ [JAAKFaceDetectorView] Setting up face detector...")
+        print("🏗️ [JAAKVisageView] Setting up face detector...")
         
         // Create face detector instance
-        let detector = JAAKFaceDetectorSDK(configuration: configuration)
+        let detector = JAAKVisageSDK(configuration: configuration)
         
         // Create and store internal delegate with strong reference
         let internalDelegate = InternalDelegate(parentDelegate: delegate)
@@ -113,10 +113,10 @@ public struct JAAKFaceDetectorView: UIViewRepresentable {
         view.internalDelegate = internalDelegate // Store strong reference
         view.isSetup = true
         
-        print("✅ [JAAKFaceDetectorView] Face detector setup completed")
+        print("✅ [JAAKVisageView] Face detector setup completed")
     }
     
-    private func configurationMatches(_ config1: JAAKFaceDetectorConfiguration, _ config2: JAAKFaceDetectorConfiguration) -> Bool {
+    private func configurationMatches(_ config1: JAAKVisageConfiguration, _ config2: JAAKVisageConfiguration) -> Bool {
         // Only compare properties that require full recreation of the detector
         // Dynamic properties like hideTimer, etc. will be handled by updateConfiguration
         return config1.enableMicrophone == config2.enableMicrophone &&
@@ -132,14 +132,14 @@ public struct JAAKFaceDetectorView: UIViewRepresentable {
     // which will have access to the UIView and its faceDetector instance
 }
 
-// MARK: - JAAKFaceDetectorUIView
+// MARK: - JAAKVisageUIView
 
 @available(iOS 13.0, *)
-public class JAAKFaceDetectorUIView: UIView {
+public class JAAKVisageUIView: UIView {
     
     // MARK: - Properties
     
-    public var faceDetector: JAAKFaceDetectorSDK?
+    public var faceDetector: JAAKVisageSDK?
     public var previewView: UIView?
     public var isSetup: Bool = false
     public var internalDelegate: InternalDelegate?
@@ -167,26 +167,26 @@ public class JAAKFaceDetectorUIView: UIView {
     /// Start face detection
     @available(iOS 13.0, *)
     public func startDetection() {
-        print("🚀 [JAAKFaceDetectorUIView] Starting face detection...")
+        print("🚀 [JAAKVisageUIView] Starting face detection...")
         
         do {
             try faceDetector?.startDetection()
         } catch {
-            print("❌ [JAAKFaceDetectorUIView] Failed to start detection: \(error)")
+            print("❌ [JAAKVisageUIView] Failed to start detection: \(error)")
         }
     }
     
     /// Stop face detection
     @available(iOS 13.0, *)
     public func stopDetection() {
-        print("⏹️ [JAAKFaceDetectorUIView] Stopping face detection...")
+        print("⏹️ [JAAKVisageUIView] Stopping face detection...")
         faceDetector?.stopDetection()
     }
     
     /// Record video
     @available(iOS 13.0, *)
-    public func recordVideo(completion: @escaping (Result<JAAKFileResult, JAAKFaceDetectorError>) -> Void) {
-        print("🎬 [JAAKFaceDetectorUIView] Starting video recording...")
+    public func recordVideo(completion: @escaping (Result<JAAKFileResult, JAAKVisageError>) -> Void) {
+        print("🎬 [JAAKVisageUIView] Starting video recording...")
         faceDetector?.recordVideo(completion: completion)
     }
     
@@ -207,78 +207,78 @@ public class JAAKFaceDetectorUIView: UIView {
 // MARK: - Internal Delegate
 
 @available(iOS 13.0, *)
-public class InternalDelegate: JAAKFaceDetectorSDKDelegate {
+public class InternalDelegate: JAAKVisageSDKDelegate {
     
-    weak var parentDelegate: JAAKFaceDetectorViewDelegate?
+    weak var parentDelegate: JAAKVisageViewDelegate?
     
-    public init(parentDelegate: JAAKFaceDetectorViewDelegate?) {
+    public init(parentDelegate: JAAKVisageViewDelegate?) {
         self.parentDelegate = parentDelegate
     }
     
-    public func faceDetector(_ detector: JAAKFaceDetectorSDK, didUpdateStatus status: JAAKFaceDetectorStatus) {
+    public func faceDetector(_ detector: JAAKVisageSDK, didUpdateStatus status: JAAKVisageStatus) {
         DispatchQueue.main.async { [weak self] in
             // Convert to our view-specific delegate
             self?.parentDelegate?.faceDetectorView(status: status)
         }
     }
     
-    public func faceDetector(_ detector: JAAKFaceDetectorSDK, didDetectFace message: JAAKFaceDetectionMessage) {
+    public func faceDetector(_ detector: JAAKVisageSDK, didDetectFace message: JAAKFaceDetectionMessage) {
         DispatchQueue.main.async { [weak self] in
             // Convert to our view-specific delegate
             self?.parentDelegate?.faceDetectorView(didDetectFace: message)
         }
     }
     
-    public func faceDetector(_ detector: JAAKFaceDetectorSDK, didCaptureFile result: JAAKFileResult) {
+    public func faceDetector(_ detector: JAAKVisageSDK, didCaptureFile result: JAAKFileResult) {
         // This is handled by the public methods - no action needed
         // The actual file capture handling is done through direct method calls
     }
     
-    public func faceDetector(_ detector: JAAKFaceDetectorSDK, didEncounterError error: JAAKFaceDetectorError) {
+    public func faceDetector(_ detector: JAAKVisageSDK, didEncounterError error: JAAKVisageError) {
         // This is handled by the public methods - no action needed
         // Error handling is done through direct method calls
     }
 }
 
-// MARK: - JAAKFaceDetectorViewDelegate
+// MARK: - JAAKVisageViewDelegate
 
-/// Delegate protocol for JAAKFaceDetectorView events
+/// Delegate protocol for JAAKVisageView events
 @available(iOS 13.0, *)
-public protocol JAAKFaceDetectorViewDelegate: AnyObject {
+public protocol JAAKVisageViewDelegate: AnyObject {
     
     /// Called when face detection starts or fails to start
     /// - Parameters:
     ///   - view: The face detector view
     ///   - success: Whether detection started successfully
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didStartDetection success: Bool)
+    func faceDetectorView(_ view: JAAKVisageView, didStartDetection success: Bool)
     
     /// Called when face detection stops
     /// - Parameters:
     ///   - view: The face detector view
     ///   - success: Whether detection stopped successfully
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didStopDetection success: Bool)
+    func faceDetectorView(_ view: JAAKVisageView, didStopDetection success: Bool)
     
     /// Called when camera is toggled
     /// - Parameters:
     ///   - view: The face detector view
     ///   - success: Whether camera toggle was successful
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didToggleCamera success: Bool)
+    func faceDetectorView(_ view: JAAKVisageView, didToggleCamera success: Bool)
     
     /// Called when a file is captured (video)
     /// - Parameters:
     ///   - view: The face detector view
     ///   - fileResult: The captured file result
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didCaptureFile fileResult: JAAKFileResult)
+    func faceDetectorView(_ view: JAAKVisageView, didCaptureFile fileResult: JAAKFileResult)
     
     /// Called when an error occurs
     /// - Parameters:
     ///   - view: The face detector view
     ///   - error: The error that occurred
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didEncounterError error: Error)
+    func faceDetectorView(_ view: JAAKVisageView, didEncounterError error: Error)
     
     /// Called when face detection status changes
     /// - Parameter status: The new status
-    func faceDetectorView(status: JAAKFaceDetectorStatus)
+    func faceDetectorView(status: JAAKVisageStatus)
     
     /// Called when face detection occurs
     /// - Parameter message: The face detection message
@@ -288,29 +288,29 @@ public protocol JAAKFaceDetectorViewDelegate: AnyObject {
 // MARK: - Optional Delegate Methods
 
 @available(iOS 13.0, *)
-public extension JAAKFaceDetectorViewDelegate {
+public extension JAAKVisageViewDelegate {
     
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didStartDetection success: Bool) {
+    func faceDetectorView(_ view: JAAKVisageView, didStartDetection success: Bool) {
         // Optional implementation
     }
     
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didStopDetection success: Bool) {
+    func faceDetectorView(_ view: JAAKVisageView, didStopDetection success: Bool) {
         // Optional implementation
     }
     
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didToggleCamera success: Bool) {
+    func faceDetectorView(_ view: JAAKVisageView, didToggleCamera success: Bool) {
         // Optional implementation
     }
     
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didCaptureFile fileResult: JAAKFileResult) {
+    func faceDetectorView(_ view: JAAKVisageView, didCaptureFile fileResult: JAAKFileResult) {
         // Optional implementation
     }
     
-    func faceDetectorView(_ view: JAAKFaceDetectorView, didEncounterError error: Error) {
+    func faceDetectorView(_ view: JAAKVisageView, didEncounterError error: Error) {
         // Optional implementation
     }
     
-    func faceDetectorView(status: JAAKFaceDetectorStatus) {
+    func faceDetectorView(status: JAAKVisageStatus) {
         // Optional implementation
     }
     

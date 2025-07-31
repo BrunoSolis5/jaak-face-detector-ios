@@ -26,7 +26,7 @@ internal class JAAKInstructionView: UIView {
     
     // MARK: - Properties
     
-    private let configuration: JAAKFaceDetectorConfiguration
+    private let configuration: JAAKVisageConfiguration
     private var currentState: InstructionState = .hidden
     private var instructionSteps: [InstructionStep] = []
     private var currentStepIndex: Int = 0
@@ -65,7 +65,7 @@ internal class JAAKInstructionView: UIView {
     
     // MARK: - Initialization
     
-    init(configuration: JAAKFaceDetectorConfiguration) {
+    init(configuration: JAAKVisageConfiguration) {
         self.configuration = configuration
         super.init(frame: .zero)
         setupUI()
@@ -73,7 +73,7 @@ internal class JAAKInstructionView: UIView {
     }
     
     required init?(coder: NSCoder) {
-        self.configuration = JAAKFaceDetectorConfiguration()
+        self.configuration = JAAKVisageConfiguration()
         super.init(coder: coder)
         setupUI()
         setupInstructionSteps()
@@ -887,7 +887,7 @@ internal class JAAKInstructionView: UIView {
     private func loadIconImage(named: String) -> UIImage? {
         // Try multiple paths to find the image
         let possiblePaths = [
-            "/Users/diego.bruno/Development/iOS/JAAKFaceDetector/JAAKFaceDetector/Assets/\(named).png",
+            "/Users/diego.bruno/Development/iOS/JAAKVisage/JAAKVisage/Assets/\(named).png",
             Bundle.main.path(forResource: named, ofType: "png"),
             Bundle(for: type(of: self)).path(forResource: named, ofType: "png")
         ].compactMap { $0 }
