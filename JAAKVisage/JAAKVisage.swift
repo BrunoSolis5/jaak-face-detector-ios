@@ -876,6 +876,82 @@ extension JAAKVisageSDK: JAAKInstructionControllerDelegate {
             faceDetectionEngine?.resumeDetection()
         }
     }
+    
+    func instructionController(_ controller: JAAKInstructionController, didRequestCameraList completion: @escaping ([String], String?) -> Void) {
+        // Get available cameras using AVFoundation
+        print("📷 [VisageSDK] Requesting camera list")
+        
+        var deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInWideAngleCamera, .builtInTelephotoCamera]
+        if #available(iOS 13.0, *) {
+            deviceTypes.append(.builtInUltraWideCamera)
+        }
+        
+        let discoverySession = AVCaptureDevice.DiscoverySession(
+            deviceTypes: deviceTypes,
+            mediaType: .video,
+            position: .unspecified
+        )
+        
+        let availableCameras = discoverySession.devices.map { device -> String in
+            switch device.position {
+            case .front:
+                return "Front Camera"
+            case .back:
+                return "Back Camera"
+            default:
+                return device.localizedName
+            }
+        }
+        
+        // Remove duplicates and ensure we have at least basic cameras
+        let uniqueCameras = Array(Set(availableCameras))
+        let finalCameras = uniqueCameras.isEmpty ? ["Front Camera", "Back Camera"] : uniqueCameras
+        
+        // Determine current camera name based on configuration
+        let currentCameraName: String
+        switch configuration.cameraPosition {
+        case .front:
+            currentCameraName = "Front Camera"
+        case .back:
+            currentCameraName = "Back Camera"
+        default:
+            currentCameraName = "Back Camera" // Default fallback
+        }
+        
+        print("📷 [VisageSDK] Available cameras: \(finalCameras), current: \(currentCameraName)")
+        completion(finalCameras, currentCameraName)
+    }
+    
+    func instructionController(_ controller: JAAKInstructionController, didSelectCamera cameraName: String) {
+        // Switch to selected camera
+        print("📷 [VisageSDK] Switching to camera: \(cameraName)")
+        
+        do {
+            // Determine camera position from name
+            let targetPosition: AVCaptureDevice.Position
+            if cameraName.lowercased().contains("front") {
+                targetPosition = .front
+            } else if cameraName.lowercased().contains("back") {
+                targetPosition = .back
+            } else {
+                // Default to toggle behavior
+                targetPosition = (configuration.cameraPosition == .front) ? .back : .front
+            }
+            
+            // Update configuration
+            var updatedConfig = configuration
+            updatedConfig.cameraPosition = targetPosition
+            
+            // Use existing camera manager to switch camera
+            try cameraManager?.toggleCamera(to: targetPosition, configuration: updatedConfig)
+            
+            // Update our configuration
+            self.configuration = updatedConfig
+            
+        } catch {
+            print("❌ [VisageSDK] Failed to switch camera: \(error)")
+        }
+    }
 }
 
 
@@ -1298,7 +1374,12 @@ internal class JAAKStatusIndicatorView: UIView {
         backgroundView.clipsToBounds = true
         
         // Blur effect (iOS equivalent of backdrop-filter: blur(20px))
-        let blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        let blurEffect: UIBlurEffect
+        if #available(iOS 13.0, *) {
+            blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        } else {
+            blurEffect = UIBlurEffect(style: .dark)
+        }
         let blurView = UIVisualEffectView(effect: blurEffect)
         blurView.isUserInteractionEnabled = false
         blurView.translatesAutoresizingMaskIntoConstraints = false

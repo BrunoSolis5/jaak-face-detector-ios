@@ -4,6 +4,8 @@ protocol JAAKInstructionViewDelegate: AnyObject {
     func instructionView(_ instructionView: JAAKInstructionView, didComplete completed: Bool)
     func instructionViewHelpButtonTapped(_ instructionView: JAAKInstructionView)
     func instructionView(_ instructionView: JAAKInstructionView, willStartInstructions isStarting: Bool)
+    func instructionView(_ instructionView: JAAKInstructionView, didRequestCameraList completion: @escaping ([String], String?) -> Void)
+    func instructionView(_ instructionView: JAAKInstructionView, didSelectCamera cameraName: String)
 }
 
 /// Instruction view for guiding users through face detection process
@@ -51,6 +53,11 @@ internal class JAAKInstructionView: UIView {
     private var segmentFills: [UIView] = []
     private var segmentWidthConstraints: [NSLayoutConstraint] = []
     private let helpButton = UIButton()
+    private let cameraButton = UIButton()
+    private let cameraMenuView = UIView()
+    private let cameraMenuContainerView = UIStackView()
+    private var cameraMenuButtons: [UIButton] = []
+    private var isCameraMenuVisible = false
     private let watermarkImageView = UIImageView()
     
     // Instruction buttons
@@ -118,6 +125,9 @@ internal class JAAKInstructionView: UIView {
         // Hide help button when instructions are showing (matching webcomponent behavior)
         helpButton.isHidden = true
         
+        // Hide camera button when instructions are showing (matching webcomponent behavior)
+        cameraButton.isHidden = true
+        
         // Show the backdrop and instruction content
         backdropView.isHidden = false
         backdropView.alpha = 0.0
@@ -178,6 +188,9 @@ internal class JAAKInstructionView: UIView {
             
             // Show help button again when instructions are hidden (matching webcomponent behavior)
             self.helpButton.isHidden = false
+            
+            // Show camera button again when instructions are hidden (matching webcomponent behavior)
+            self.cameraButton.isHidden = false
             
             self.delegate?.instructionView(self, didComplete: false)
             
@@ -346,6 +359,16 @@ internal class JAAKInstructionView: UIView {
         setupHelpButton()
         addSubview(helpButton) // Add to main view, not contentView
         
+        // Camera button - positioned below help button (matching webcomponent)
+        setupCameraButton()
+        cameraButton.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(cameraButton) // Add to main view, not contentView
+        
+        // Camera menu setup
+        setupCameraMenu()
+        cameraMenuView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(cameraMenuView) // Add to main view, not contentView
+        
         // Watermark - positioned at bottom-right of the main view
         watermarkImageView.contentMode = .scaleAspectFit
         watermarkImageView.alpha = 0.6
@@ -376,6 +399,10 @@ internal class JAAKInstructionView: UIView {
         // Help button visible by default (matching webcomponent: shown when instructions are NOT active)
         helpButton.isHidden = false
         helpButton.alpha = 1.0
+        
+        // Camera button visible by default (matching webcomponent: shown when instructions are NOT active)
+        cameraButton.isHidden = false
+        cameraButton.alpha = 1.0
     }
     
     private func setupInstructionButtons() {
@@ -478,7 +505,12 @@ internal class JAAKInstructionView: UIView {
         helpButton.clipsToBounds = true
         
         // Blur effect (iOS equivalent of backdrop-filter: blur(20px))
-        let blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        let blurEffect: UIBlurEffect
+        if #available(iOS 13.0, *) {
+            blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        } else {
+            blurEffect = UIBlurEffect(style: .dark)
+        }
         let blurView = UIVisualEffectView(effect: blurEffect)
         blurView.isUserInteractionEnabled = false
         blurView.translatesAutoresizingMaskIntoConstraints = false
@@ -509,6 +541,101 @@ internal class JAAKInstructionView: UIView {
         ])
         
         helpButton.addTarget(self, action: #selector(helpButtonTapped), for: .touchUpInside)
+    }
+    
+    private func setupCameraButton() {
+        // Exact webcomponent styling: rgba(0, 0, 0, 0.25), backdrop-filter: blur(20px), border: 1px solid rgba(255, 255, 255, 0.1)
+        cameraButton.backgroundColor = UIColor.black.withAlphaComponent(0.25)
+        cameraButton.layer.cornerRadius = 22 // 44px / 2 = 22px radius for perfect circle
+        cameraButton.clipsToBounds = true
+        
+        // Blur effect (iOS equivalent of backdrop-filter: blur(20px))
+        let blurEffect: UIBlurEffect
+        if #available(iOS 13.0, *) {
+            blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        } else {
+            blurEffect = UIBlurEffect(style: .dark)
+        }
+        let blurView = UIVisualEffectView(effect: blurEffect)
+        blurView.isUserInteractionEnabled = false
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        cameraButton.insertSubview(blurView, at: 0)
+        
+        NSLayoutConstraint.activate([
+            blurView.topAnchor.constraint(equalTo: cameraButton.topAnchor),
+            blurView.leadingAnchor.constraint(equalTo: cameraButton.leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: cameraButton.trailingAnchor),
+            blurView.bottomAnchor.constraint(equalTo: cameraButton.bottomAnchor)
+        ])
+        
+        // Border: 1px solid rgba(255, 255, 255, 0.1)
+        cameraButton.layer.borderWidth = 1.0
+        cameraButton.layer.borderColor = UIColor.white.withAlphaComponent(0.1).cgColor
+        
+        // SVG camera icon (exact replica of webcomponent SVG)
+        let cameraImageView = createCameraSVG()
+        cameraImageView.isUserInteractionEnabled = false
+        cameraButton.addSubview(cameraImageView)
+        
+        cameraImageView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            cameraImageView.centerXAnchor.constraint(equalTo: cameraButton.centerXAnchor),
+            cameraImageView.centerYAnchor.constraint(equalTo: cameraButton.centerYAnchor),
+            cameraImageView.widthAnchor.constraint(equalToConstant: 20),
+            cameraImageView.heightAnchor.constraint(equalToConstant: 20)
+        ])
+        
+        cameraButton.addTarget(self, action: #selector(cameraButtonTapped), for: .touchUpInside)
+    }
+    
+    private func setupCameraMenu() {
+        // Exact webcomponent styling
+        cameraMenuView.backgroundColor = UIColor.black.withAlphaComponent(0.25)
+        cameraMenuView.layer.cornerRadius = 12
+        cameraMenuView.layer.borderWidth = 1.0
+        cameraMenuView.layer.borderColor = UIColor.white.withAlphaComponent(0.1).cgColor
+        cameraMenuView.clipsToBounds = true
+        cameraMenuView.isUserInteractionEnabled = true
+        
+        // Blur effect
+        let blurEffect: UIBlurEffect
+        if #available(iOS 13.0, *) {
+            blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        } else {
+            blurEffect = UIBlurEffect(style: .dark)
+        }
+        let blurView = UIVisualEffectView(effect: blurEffect)
+        blurView.isUserInteractionEnabled = false
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        cameraMenuView.insertSubview(blurView, at: 0)
+        
+        NSLayoutConstraint.activate([
+            blurView.topAnchor.constraint(equalTo: cameraMenuView.topAnchor),
+            blurView.leadingAnchor.constraint(equalTo: cameraMenuView.leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: cameraMenuView.trailingAnchor),
+            blurView.bottomAnchor.constraint(equalTo: cameraMenuView.bottomAnchor)
+        ])
+        
+        // Container for menu items (UIStackView)
+        cameraMenuContainerView.backgroundColor = .clear
+        cameraMenuContainerView.axis = .vertical
+        cameraMenuContainerView.distribution = .fill
+        cameraMenuContainerView.alignment = .fill
+        cameraMenuContainerView.spacing = 2 // Small spacing between items for better touch separation
+        cameraMenuContainerView.isUserInteractionEnabled = true
+        cameraMenuView.addSubview(cameraMenuContainerView)
+        
+        cameraMenuContainerView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            cameraMenuContainerView.topAnchor.constraint(equalTo: cameraMenuView.topAnchor, constant: 6),
+            cameraMenuContainerView.leadingAnchor.constraint(equalTo: cameraMenuView.leadingAnchor, constant: 10),
+            cameraMenuContainerView.trailingAnchor.constraint(equalTo: cameraMenuView.trailingAnchor, constant: -10),
+            cameraMenuContainerView.bottomAnchor.constraint(equalTo: cameraMenuView.bottomAnchor, constant: -6)
+        ])
+        
+        // Initially hidden
+        cameraMenuView.isHidden = true
+        cameraMenuView.alpha = 0.0
     }
     
     private func createQuestionMarkSVG() -> UIImageView {
@@ -557,6 +684,53 @@ internal class JAAKInstructionView: UIView {
         return imageView
     }
     
+    private func createCameraSVG() -> UIImageView {
+        // Create the exact camera SVG from webcomponent as vector drawing
+        let size = CGSize(width: 20, height: 20)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        
+        let image = renderer.image { context in
+            let cgContext = context.cgContext
+            
+            // Set up drawing context
+            cgContext.setStrokeColor(UIColor.white.cgColor)
+            cgContext.setFillColor(UIColor.white.cgColor)
+            cgContext.setLineWidth(2.0)
+            cgContext.setLineCap(.round)
+            cgContext.setLineJoin(.round)
+            
+            // Draw camera body path
+            // d="M2 7C2 5.89543 2.89543 5 4 5H5.58579C6.11607 5 6.62464 4.78929 7 4.41421L7.58579 3.82843C8.33607 3.07815 9.36086 2.66667 10.4142 2.66667H11.5858C12.6391 2.66667 13.6639 3.07815 14.4142 3.82843L15 4.41421C15.3754 4.78929 15.8839 5 16.4142 5H18C19.1046 5 20 5.89543 20 7V15C20 16.1046 19.1046 17 18 17H4C2.89543 17 2 16.1046 2 15V7Z"
+            
+            // Camera body with rounded rectangle using UIBezierPath
+            let cameraBodyRect = CGRect(x: 2, y: 7, width: 16, height: 8)
+            let cameraBodyPath = UIBezierPath(roundedRect: cameraBodyRect, cornerRadius: 2)
+            cgContext.addPath(cameraBodyPath.cgPath)
+            cgContext.strokePath()
+            
+            // Camera lens housing (top part)
+            cgContext.beginPath()
+            cgContext.move(to: CGPoint(x: 7, y: 5))
+            cgContext.addLine(to: CGPoint(x: 13, y: 5))
+            cgContext.addLine(to: CGPoint(x: 15, y: 7))
+            cgContext.addLine(to: CGPoint(x: 5, y: 7))
+            cgContext.closePath()
+            cgContext.strokePath()
+            
+            // Draw main lens circle (cx="10" cy="10" r="3")
+            cgContext.addArc(center: CGPoint(x: 10, y: 10), radius: 3, startAngle: 0, endAngle: .pi * 2, clockwise: false)
+            cgContext.strokePath()
+            
+            // Draw flash/indicator dot (cx="15" cy="7" r="1")
+            cgContext.addArc(center: CGPoint(x: 15, y: 7), radius: 1, startAngle: 0, endAngle: .pi * 2, clockwise: false)
+            cgContext.fillPath()
+        }
+        
+        let imageView = UIImageView(image: image)
+        imageView.tintColor = .white
+        return imageView
+    }
+    
     // MARK: - Button Actions
     
     @objc private func pauseButtonTapped() {
@@ -583,6 +757,247 @@ internal class JAAKInstructionView: UIView {
         }
     }
     
+    @objc private func cameraButtonTapped() {
+        print("📷 [JAAKInstructionView] Camera button tapped")
+        
+        // Toggle camera menu visibility
+        let isVisible = !cameraMenuView.isHidden
+        
+        if isVisible {
+            // Hide menu
+            hideCameraMenu()
+        } else {
+            // Show menu and populate with available cameras
+            showCameraMenu()
+        }
+    }
+    
+    private func showCameraMenu() {
+        // Request camera list from delegate
+        delegate?.instructionView(self, didRequestCameraList: { [weak self] cameras, currentCamera in
+            DispatchQueue.main.async {
+                self?.populateCameraMenu(with: cameras, currentCamera: currentCamera)
+                self?.animateMenuVisibility(show: true)
+            }
+        })
+    }
+    
+    private func hideCameraMenu() {
+        animateMenuVisibility(show: false)
+    }
+    
+    private func populateCameraMenu(with cameras: [String], currentCamera: String?) {
+        // Clear existing camera items
+        cameraMenuContainerView.arrangedSubviews.forEach { view in
+            if view.tag == 100 { // Camera item tag
+                cameraMenuContainerView.removeArrangedSubview(view)
+                view.removeFromSuperview()
+            }
+        }
+        
+        // Add header if not present
+        if cameraMenuContainerView.arrangedSubviews.isEmpty {
+            let headerLabel = UILabel()
+            headerLabel.text = "SELECT CAMERA"
+            headerLabel.font = UIFont.systemFont(ofSize: 10, weight: .medium)
+            headerLabel.textColor = UIColor.white.withAlphaComponent(0.6)
+            headerLabel.textAlignment = .left
+            headerLabel.tag = 99 // Header tag
+            
+            let headerContainer = UIView()
+            headerContainer.addSubview(headerLabel)
+            headerLabel.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                headerLabel.topAnchor.constraint(equalTo: headerContainer.topAnchor, constant: 6),
+                headerLabel.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor, constant: 12),
+                headerLabel.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor, constant: -12),
+                headerLabel.bottomAnchor.constraint(equalTo: headerContainer.bottomAnchor, constant: -6)
+            ])
+            
+            // Add border at bottom
+            let borderView = UIView()
+            borderView.backgroundColor = UIColor.white.withAlphaComponent(0.1)
+            headerContainer.addSubview(borderView)
+            borderView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                borderView.leadingAnchor.constraint(equalTo: headerContainer.leadingAnchor),
+                borderView.trailingAnchor.constraint(equalTo: headerContainer.trailingAnchor),
+                borderView.bottomAnchor.constraint(equalTo: headerContainer.bottomAnchor),
+                borderView.heightAnchor.constraint(equalToConstant: 1)
+            ])
+            
+            cameraMenuContainerView.addArrangedSubview(headerContainer)
+        }
+        
+        // Add camera items
+        for (index, cameraName) in cameras.enumerated() {
+            let isSelected = (cameraName == currentCamera)
+            let cameraButton = createCameraMenuItem(name: cameraName, index: index, isSelected: isSelected)
+            cameraMenuContainerView.addArrangedSubview(cameraButton)
+        }
+    }
+    
+    private func createCameraMenuItem(name: String, index: Int, isSelected: Bool) -> UIButton {
+        let button = UIButton(type: .custom)
+        button.tag = 100 // Camera item tag
+        button.backgroundColor = UIColor.clear
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.isUserInteractionEnabled = true
+        
+        // Create container for button content
+        let container = UIView()
+        container.isUserInteractionEnabled = false // Let touches pass through to button
+        button.addSubview(container)
+        container.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            container.topAnchor.constraint(equalTo: button.topAnchor, constant: 6),
+            container.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 12),
+            container.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -12),
+            container.bottomAnchor.constraint(equalTo: button.bottomAnchor, constant: -6)
+        ])
+        
+        // Camera name label
+        let nameLabel = UILabel()
+        nameLabel.text = name.isEmpty ? "Camera \(index + 1)" : name
+        nameLabel.font = UIFont.systemFont(ofSize: 12, weight: .regular)
+        nameLabel.textColor = .white
+        nameLabel.textAlignment = .left
+        container.addSubview(nameLabel)
+        
+        // Checkmark (show if selected)
+        let checkmark = createCheckmarkSVG()
+        checkmark.isHidden = !isSelected
+        container.addSubview(checkmark)
+        
+        // Set background color if selected
+        if isSelected {
+            button.backgroundColor = UIColor.white.withAlphaComponent(0.15)
+        } else {
+            // Add subtle background for better touch visualization (debugging)
+            button.backgroundColor = UIColor.white.withAlphaComponent(0.05)
+        }
+        
+        nameLabel.translatesAutoresizingMaskIntoConstraints = false
+        checkmark.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            // Button minimum height for proper touch area
+            button.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            
+            nameLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            nameLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            nameLabel.trailingAnchor.constraint(equalTo: checkmark.leadingAnchor, constant: -6),
+            
+            checkmark.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            checkmark.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            checkmark.widthAnchor.constraint(equalToConstant: 16),
+            checkmark.heightAnchor.constraint(equalToConstant: 16)
+        ])
+        
+        // Add action
+        button.addTarget(self, action: #selector(cameraMenuItemTapped(_:)), for: .touchUpInside)
+        
+        // Add hover effect
+        button.addTarget(self, action: #selector(cameraMenuItemHighlighted(_:)), for: .touchDown)
+        button.addTarget(self, action: #selector(cameraMenuItemUnhighlighted(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+        
+        return button
+    }
+    
+    private func createCheckmarkSVG() -> UIImageView {
+        // Create checkmark SVG from web component: <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        let size = CGSize(width: 16, height: 16)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        
+        let image = renderer.image { context in
+            let cgContext = context.cgContext
+            
+            cgContext.setStrokeColor(UIColor(red: 92/255, green: 184/255, blue: 92/255, alpha: 1).cgColor) // #5cb85c
+            cgContext.setLineWidth(2.0)
+            cgContext.setLineCap(.round)
+            cgContext.setLineJoin(.round)
+            
+            // Scale path to fit 16x16 (original was 16x16)
+            cgContext.beginPath()
+            cgContext.move(to: CGPoint(x: 13.5, y: 4.5))
+            cgContext.addLine(to: CGPoint(x: 6, y: 12))
+            cgContext.addLine(to: CGPoint(x: 2.5, y: 8.5))
+            cgContext.strokePath()
+        }
+        
+        return UIImageView(image: image)
+    }
+    
+    @objc private func cameraMenuItemTapped(_ sender: UIButton) {
+        guard let nameLabel = sender.subviews.first?.subviews.first as? UILabel,
+              let cameraName = nameLabel.text else { return }
+        
+        print("📷 [JAAKInstructionView] Camera selected: \(cameraName)")
+        
+        // Update UI to show selection
+        updateCameraMenuSelection(selectedButton: sender)
+        
+        // Notify delegate
+        delegate?.instructionView(self, didSelectCamera: cameraName)
+        
+        // Hide menu after selection
+        hideCameraMenu()
+    }
+    
+    @objc private func cameraMenuItemHighlighted(_ sender: UIButton) {
+        print("🔘 [JAAKInstructionView] Camera menu item highlighted")
+        UIView.animate(withDuration: 0.2) {
+            sender.backgroundColor = UIColor.white.withAlphaComponent(0.25)
+        }
+    }
+    
+    @objc private func cameraMenuItemUnhighlighted(_ sender: UIButton) {
+        print("🔘 [JAAKInstructionView] Camera menu item unhighlighted")
+        UIView.animate(withDuration: 0.2) {
+            // Restore original background based on selection state
+            let isSelected = !(sender.subviews.first?.subviews.last?.isHidden ?? true)
+            sender.backgroundColor = isSelected ? UIColor.white.withAlphaComponent(0.15) : UIColor.white.withAlphaComponent(0.05)
+        }
+    }
+    
+    private func updateCameraMenuSelection(selectedButton: UIButton) {
+        // Hide all checkmarks first
+        cameraMenuContainerView.arrangedSubviews.forEach { view in
+            if let button = view as? UIButton, button.tag == 100 {
+                if let checkmark = button.subviews.first?.subviews.last as? UIImageView {
+                    checkmark.isHidden = true
+                }
+                button.backgroundColor = UIColor.clear
+            }
+        }
+        
+        // Show checkmark for selected item
+        if let checkmark = selectedButton.subviews.first?.subviews.last as? UIImageView {
+            checkmark.isHidden = false
+        }
+        selectedButton.backgroundColor = UIColor.white.withAlphaComponent(0.15)
+    }
+    
+    private func animateMenuVisibility(show: Bool) {
+        if show {
+            cameraMenuView.isHidden = false
+            cameraMenuView.alpha = 0.0
+            cameraMenuView.transform = CGAffineTransform(translationX: 10, y: 0)
+            
+            UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseOut) {
+                self.cameraMenuView.alpha = 1.0
+                self.cameraMenuView.transform = .identity
+            }
+        } else {
+            UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseIn) {
+                self.cameraMenuView.alpha = 0.0
+                self.cameraMenuView.transform = CGAffineTransform(translationX: 10, y: 0)
+            } completion: { _ in
+                self.cameraMenuView.isHidden = true
+            }
+        }
+    }
+
     @objc private func nextButtonTapped() {
         print("➡️ [JAAKInstructionView] Next button tapped - current step: \(currentStepIndex)")
         
@@ -810,6 +1225,17 @@ internal class JAAKInstructionView: UIView {
             helpButton.widthAnchor.constraint(equalToConstant: 44),
             helpButton.heightAnchor.constraint(equalToConstant: 44),
             
+            // Camera button - positioned below help button matching webcomponent (76px from top, 20px from right)
+            cameraButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -20),
+            cameraButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 76),
+            cameraButton.widthAnchor.constraint(equalToConstant: 44),
+            cameraButton.heightAnchor.constraint(equalToConstant: 44),
+            
+            // Camera menu - positioned next to camera button matching webcomponent (76px from top, 76px from right)
+            cameraMenuView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -76),
+            cameraMenuView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 76),
+            cameraMenuView.widthAnchor.constraint(greaterThanOrEqualToConstant: 160),
+            
             // Watermark - positioned at bottom-right of the full screen with responsive size
             watermarkImageView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -12),
             watermarkImageView.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -12),
@@ -954,6 +1380,9 @@ internal class JAAKInstructionView: UIView {
         
         // Show help button again since instructions are completing
         helpButton.isHidden = false
+        
+        // Show camera button again since instructions are completing
+        cameraButton.isHidden = false
         
         // Hide after a brief delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {

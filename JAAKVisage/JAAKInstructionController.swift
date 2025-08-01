@@ -204,6 +204,16 @@ extension JAAKInstructionController: JAAKInstructionViewDelegate {
         // Notify the main controller to pause/resume face detection
         delegate?.instructionController(self, shouldPauseDetection: isStarting)
     }
+    
+    func instructionView(_ instructionView: JAAKInstructionView, didRequestCameraList completion: @escaping ([String], String?) -> Void) {
+        // Request available cameras from the main controller
+        delegate?.instructionController(self, didRequestCameraList: completion)
+    }
+    
+    func instructionView(_ instructionView: JAAKInstructionView, didSelectCamera cameraName: String) {
+        // Notify the main controller about camera selection
+        delegate?.instructionController(self, didSelectCamera: cameraName)
+    }
 }
 
 // MARK: - JAAKInstructionControllerDelegate
@@ -211,4 +221,6 @@ extension JAAKInstructionController: JAAKInstructionViewDelegate {
 protocol JAAKInstructionControllerDelegate: AnyObject {
     func instructionController(_ controller: JAAKInstructionController, didCompleteInstructions completed: Bool)
     func instructionController(_ controller: JAAKInstructionController, shouldPauseDetection pause: Bool)
+    func instructionController(_ controller: JAAKInstructionController, didRequestCameraList completion: @escaping ([String], String?) -> Void)
+    func instructionController(_ controller: JAAKInstructionController, didSelectCamera cameraName: String)
 }
