@@ -115,6 +115,9 @@ internal class JAAKInstructionView: UIView {
         // Notify delegate that instructions are starting (to pause detection)
         delegate?.instructionView(self, willStartInstructions: true)
         
+        // Hide help button when instructions are showing (matching webcomponent behavior)
+        helpButton.isHidden = true
+        
         // Show the backdrop and instruction content
         backdropView.isHidden = false
         backdropView.alpha = 0.0
@@ -172,6 +175,10 @@ internal class JAAKInstructionView: UIView {
             self.contentView.isHidden = true
             self.buttonContainerView.isHidden = true
             self.progressContainerView.isHidden = true
+            
+            // Show help button again when instructions are hidden (matching webcomponent behavior)
+            self.helpButton.isHidden = false
+            
             self.delegate?.instructionView(self, didComplete: false)
             
             // Notify delegate that instructions ended (to resume detection)
@@ -335,14 +342,8 @@ internal class JAAKInstructionView: UIView {
         // Setup segmented progress bar (like webcomponent)
         setupSegmentedProgressBar()
         
-        // Help button (?) - positioned at top-left of the main view
-        helpButton.setTitle("?", for: .normal)
-        helpButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .bold)
-        helpButton.setTitleColor(.white, for: .normal)
-        helpButton.backgroundColor = UIColor.black.withAlphaComponent(0.6)
-        helpButton.layer.cornerRadius = 16
-        helpButton.clipsToBounds = true
-        helpButton.addTarget(self, action: #selector(helpButtonTapped), for: .touchUpInside)
+        // Help button (?) - positioned at top-right of the main view (matching webcomponent)
+        setupHelpButton()
         addSubview(helpButton) // Add to main view, not contentView
         
         // Watermark - positioned at bottom-right of the main view
@@ -371,6 +372,10 @@ internal class JAAKInstructionView: UIView {
         buttonContainerView.alpha = 0.0
         progressContainerView.isHidden = true
         progressContainerView.alpha = 0.0
+        
+        // Help button visible by default (matching webcomponent: shown when instructions are NOT active)
+        helpButton.isHidden = false
+        helpButton.alpha = 1.0
     }
     
     private func setupInstructionButtons() {
@@ -464,6 +469,92 @@ internal class JAAKInstructionView: UIView {
                 widthConstraint // Use the stored constraint
             ])
         }
+    }
+    
+    private func setupHelpButton() {
+        // Exact webcomponent styling: rgba(0, 0, 0, 0.25), backdrop-filter: blur(20px), border: 1px solid rgba(255, 255, 255, 0.1)
+        helpButton.backgroundColor = UIColor.black.withAlphaComponent(0.25)
+        helpButton.layer.cornerRadius = 22 // 44px / 2 = 22px radius for perfect circle
+        helpButton.clipsToBounds = true
+        
+        // Blur effect (iOS equivalent of backdrop-filter: blur(20px))
+        let blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        let blurView = UIVisualEffectView(effect: blurEffect)
+        blurView.isUserInteractionEnabled = false
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        helpButton.insertSubview(blurView, at: 0)
+        
+        NSLayoutConstraint.activate([
+            blurView.topAnchor.constraint(equalTo: helpButton.topAnchor),
+            blurView.leadingAnchor.constraint(equalTo: helpButton.leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: helpButton.trailingAnchor),
+            blurView.bottomAnchor.constraint(equalTo: helpButton.bottomAnchor)
+        ])
+        
+        // Border: 1px solid rgba(255, 255, 255, 0.1)
+        helpButton.layer.borderWidth = 1.0
+        helpButton.layer.borderColor = UIColor.white.withAlphaComponent(0.1).cgColor
+        
+        // SVG question mark icon (exact replica of webcomponent SVG)
+        let questionMarkImageView = createQuestionMarkSVG()
+        questionMarkImageView.isUserInteractionEnabled = false
+        helpButton.addSubview(questionMarkImageView)
+        
+        questionMarkImageView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            questionMarkImageView.centerXAnchor.constraint(equalTo: helpButton.centerXAnchor),
+            questionMarkImageView.centerYAnchor.constraint(equalTo: helpButton.centerYAnchor),
+            questionMarkImageView.widthAnchor.constraint(equalToConstant: 20),
+            questionMarkImageView.heightAnchor.constraint(equalToConstant: 20)
+        ])
+        
+        helpButton.addTarget(self, action: #selector(helpButtonTapped), for: .touchUpInside)
+    }
+    
+    private func createQuestionMarkSVG() -> UIImageView {
+        // Create the exact SVG from webcomponent as vector drawing
+        let size = CGSize(width: 20, height: 20)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        
+        let image = renderer.image { context in
+            let cgContext = context.cgContext
+            
+            // Set up drawing context
+            cgContext.setStrokeColor(UIColor.white.cgColor)
+            cgContext.setFillColor(UIColor.white.cgColor)
+            cgContext.setLineWidth(2.0)
+            cgContext.setLineCap(.round)
+            cgContext.setLineJoin(.round)
+            
+            // Draw circle (cx="10" cy="10" r="9" stroke="currentColor" stroke-width="2")
+            let circleCenter = CGPoint(x: 10, y: 10)
+            let circleRadius: CGFloat = 9
+            cgContext.addArc(center: circleCenter, radius: circleRadius, startAngle: 0, endAngle: .pi * 2, clockwise: false)
+            cgContext.strokePath()
+            
+            // Draw question mark path (d="M7.5 7.5C7.5 6.11929 8.61929 5 10 5C11.3807 5 12.5 6.11929 12.5 7.5C12.5 8.88071 11.3807 10 10 10V11.5")
+            cgContext.beginPath()
+            cgContext.move(to: CGPoint(x: 7.5, y: 7.5))
+            
+            // This is a curved path representing a question mark shape
+            // Starting from 7.5,7.5 - curved path to 10,5 - curved to 12.5,7.5 - curved to 10,10 - line to 10,11.5
+            cgContext.addCurve(to: CGPoint(x: 10, y: 5), control1: CGPoint(x: 7.5, y: 6.11929), control2: CGPoint(x: 8.61929, y: 5))
+            cgContext.addCurve(to: CGPoint(x: 12.5, y: 7.5), control1: CGPoint(x: 11.3807, y: 5), control2: CGPoint(x: 12.5, y: 6.11929))
+            cgContext.addCurve(to: CGPoint(x: 10, y: 10), control1: CGPoint(x: 12.5, y: 8.88071), control2: CGPoint(x: 11.3807, y: 10))
+            cgContext.addLine(to: CGPoint(x: 10, y: 11.5))
+            
+            cgContext.strokePath()
+            
+            // Draw dot (cx="10" cy="14.5" r="1" fill="currentColor")
+            let dotCenter = CGPoint(x: 10, y: 14.5)
+            let dotRadius: CGFloat = 1
+            cgContext.addArc(center: dotCenter, radius: dotRadius, startAngle: 0, endAngle: .pi * 2, clockwise: false)
+            cgContext.fillPath()
+        }
+        
+        let imageView = UIImageView(image: image)
+        imageView.tintColor = .white
+        return imageView
     }
     
     // MARK: - Button Actions
@@ -713,11 +804,11 @@ internal class JAAKInstructionView: UIView {
             nextButton.centerYAnchor.constraint(equalTo: buttonContainerView.centerYAnchor),
             nextButton.heightAnchor.constraint(equalToConstant: 36),
             
-            // Help button (?) - positioned at top-left of the full screen
-            helpButton.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            helpButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
-            helpButton.widthAnchor.constraint(equalToConstant: 32),
-            helpButton.heightAnchor.constraint(equalToConstant: 32),
+            // Help button (?) - positioned at top-right matching webcomponent (20px from top and right)
+            helpButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -20),
+            helpButton.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 20),
+            helpButton.widthAnchor.constraint(equalToConstant: 44),
+            helpButton.heightAnchor.constraint(equalToConstant: 44),
             
             // Watermark - positioned at bottom-right of the full screen with responsive size
             watermarkImageView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -12),
@@ -860,6 +951,9 @@ internal class JAAKInstructionView: UIView {
         
         currentState = .hidden
         delegate?.instructionView(self, didComplete: true)
+        
+        // Show help button again since instructions are completing
+        helpButton.isHidden = false
         
         // Hide after a brief delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
