@@ -39,6 +39,7 @@ public class JAAKVisageSDK: NSObject {
     private var instructionView: JAAKInstructionView?
     private var instructionController: JAAKInstructionController?
     private var assistanceMessageView: JAAKAssistanceMessageView?
+    private var statusIndicatorView: JAAKStatusIndicatorView?
     private var watermarkImageView: UIImageView?
     
     
@@ -143,8 +144,10 @@ public class JAAKVisageSDK: NSObject {
         
         // Start camera
         print("🎥 [VisageSDK] About to start camera session...")
+        showCustomStatus("Solicitando acceso a la cámara...")
         cameraManager.startSession()
         print("🎥 [VisageSDK] Camera session start command sent")
+        showCustomStatus("Cámara activa")
         
         // Start security monitoring
         securityMonitor?.startMonitoring()
@@ -441,7 +444,22 @@ public class JAAKVisageSDK: NSObject {
             print("✅ [VisageSDK] Assistance message view added as full-screen overlay")
         }
         
-        // Add instruction view as full-screen overlay (includes help button) - ON TOP of assistance messages
+        // Add status indicator view as overlay (matching webcomponent position: top-left)
+        if let statusIndicatorView = statusIndicatorView {
+            statusIndicatorView.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(statusIndicatorView)
+            
+            NSLayoutConstraint.activate([
+                statusIndicatorView.topAnchor.constraint(equalTo: view.topAnchor),
+                statusIndicatorView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                statusIndicatorView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                statusIndicatorView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            ])
+            
+            print("✅ [VisageSDK] Status indicator view added as overlay")
+        }
+        
+        // Add instruction view as full-screen overlay (includes help button) - ON TOP of all other views
         if let instructionView = instructionView {
             instructionView.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(instructionView)
@@ -544,6 +562,10 @@ public class JAAKVisageSDK: NSObject {
         assistanceMessageView = JAAKAssistanceMessageView(configuration: configuration)
         print("✅ [VisageSDK] Validation message view created")
         
+        // Always create status indicator view (matching webcomponent status-indicator)
+        statusIndicatorView = JAAKStatusIndicatorView(configuration: configuration)
+        print("✅ [VisageSDK] Status indicator view created")
+        
         // Create watermark image view
         watermarkImageView = UIImageView()
         watermarkImageView?.contentMode = .scaleAspectFit
@@ -592,6 +614,10 @@ public class JAAKVisageSDK: NSObject {
     private func updateStatus(_ newStatus: JAAKVisageStatus) {
         status = newStatus
         
+        // Update status indicator with translated message (matching webcomponent)
+        let statusMessage = getStatusMessage(for: newStatus)
+        statusIndicatorView?.showStatus(statusMessage)
+        
         // Notify instruction controller of status change
         instructionController?.handleStatusChange(newStatus)
         
@@ -599,6 +625,33 @@ public class JAAKVisageSDK: NSObject {
             guard let self = self else { return }
             self.delegate?.faceDetector(self, didUpdateStatus: newStatus)
         }
+    }
+    
+    /// Get localized status message matching webcomponent messages
+    private func getStatusMessage(for status: JAAKVisageStatus) -> String {
+        switch status {
+        case .notLoaded:
+            return "Componente cargado"
+        case .loading:
+            return "Inicializando detección facial..."
+        case .loaded:
+            return "Detención facial lista"
+        case .running:
+            return "Detección facial activa"
+        case .recording:
+            return "Grabando video..."
+        case .finished:
+            return "Video listo para visualización"
+        case .stopped:
+            return "Cámara detenida"
+        case .error:
+            return "Error en el componente"
+        }
+    }
+    
+    /// Show custom status message (for specific camera/processing states)
+    private func showCustomStatus(_ message: String) {
+        statusIndicatorView?.showStatus(message)
     }
     
     
@@ -1175,6 +1228,149 @@ internal class JAAKAssistanceMessageView: UIView {
         UIView.animate(withDuration: 0.2) {
             self.alpha = 0.0
             self.backgroundView.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+        } completion: { _ in
+            self.isHidden = true
+        }
+    }
+}
+
+// MARK: - JAAKStatusIndicatorView
+
+/// Status indicator view for displaying system status messages (matching webcomponent status-indicator)
+internal class JAAKStatusIndicatorView: UIView {
+    
+    // MARK: - Properties
+    
+    private let configuration: JAAKVisageConfiguration
+    private var currentMessage: String = ""
+    
+    // UI Components
+    private let backgroundView = UIView()
+    private let messageLabel = UILabel()
+    
+    // MARK: - Initialization
+    
+    init(configuration: JAAKVisageConfiguration) {
+        self.configuration = configuration
+        super.init(frame: .zero)
+        setupUI()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    // MARK: - Public Methods
+    
+    /// Show status message
+    /// - Parameter message: status message to display
+    func showStatus(_ message: String) {
+        guard message != currentMessage else { return }
+        
+        currentMessage = message
+        messageLabel.text = message
+        
+        // Show with animation if hidden
+        if isHidden || alpha == 0.0 {
+            show()
+        }
+    }
+    
+    /// Hide the status indicator
+    func hideStatus() {
+        currentMessage = ""
+        hide()
+    }
+    
+    // MARK: - Private Methods
+    
+    private func setupUI() {
+        // Exact webcomponent styling:
+        // background: rgba(0, 0, 0, 0.25)
+        // backdrop-filter: blur(20px)
+        // border-radius: 12px
+        // border: 1px solid rgba(255, 255, 255, 0.1)
+        
+        backgroundView.backgroundColor = UIColor.black.withAlphaComponent(0.25)
+        backgroundView.layer.cornerRadius = 12
+        backgroundView.layer.borderWidth = 1.0
+        backgroundView.layer.borderColor = UIColor.white.withAlphaComponent(0.1).cgColor
+        backgroundView.clipsToBounds = true
+        
+        // Blur effect (iOS equivalent of backdrop-filter: blur(20px))
+        let blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        let blurView = UIVisualEffectView(effect: blurEffect)
+        blurView.isUserInteractionEnabled = false
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        backgroundView.insertSubview(blurView, at: 0)
+        
+        NSLayoutConstraint.activate([
+            blurView.topAnchor.constraint(equalTo: backgroundView.topAnchor),
+            blurView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor),
+            blurView.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor)
+        ])
+        
+        addSubview(backgroundView)
+        
+        // Message label - exact webcomponent styling:
+        // color: #ffffff
+        // font-size: 12px
+        // font-weight: 500
+        messageLabel.font = UIFont.systemFont(ofSize: 12, weight: .medium)
+        messageLabel.textColor = .white
+        messageLabel.textAlignment = .left
+        messageLabel.numberOfLines = 1
+        messageLabel.text = ""
+        backgroundView.addSubview(messageLabel)
+        
+        // Layout - exact webcomponent positioning:
+        // position: absolute
+        // top: 16px
+        // left: 16px
+        // padding: 6px 10px
+        setupLayout()
+        
+        // Initial state
+        isHidden = true
+        alpha = 0.0
+        isUserInteractionEnabled = false
+    }
+    
+    private func setupLayout() {
+        backgroundView.translatesAutoresizingMaskIntoConstraints = false
+        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            // Background - positioned at top-left matching webcomponent (16px from top and left)
+            backgroundView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 16),
+            backgroundView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            backgroundView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -16),
+            
+            // Message label - positioned inside background with exact webcomponent padding (6px 10px)
+            messageLabel.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 6),
+            messageLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 10),
+            messageLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -10),
+            messageLabel.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -6)
+        ])
+    }
+    
+    private func show() {
+        isHidden = false
+        alpha = 0.0
+        backgroundView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+        
+        // Fade in animation matching webcomponent
+        UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseOut], animations: {
+            self.alpha = 1.0
+            self.backgroundView.transform = .identity
+        })
+    }
+    
+    private func hide() {
+        UIView.animate(withDuration: 0.2) {
+            self.alpha = 0.0
+            self.backgroundView.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
         } completion: { _ in
             self.isHidden = true
         }
