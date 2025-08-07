@@ -734,23 +734,18 @@ internal class JAAKInstructionView: UIView {
     // MARK: - Button Actions
     
     @objc private func pauseButtonTapped() {
-        print("🔘 [JAAKInstructionView] Pause button tapped - isPaused: \(isPaused), currentStepIndex: \(currentStepIndex), totalSteps: \(instructionSteps.count)")
-        
         // Safety check: Don't allow pause/resume if we're beyond the last step
         guard currentStepIndex < instructionSteps.count else {
-            print("⚠️ [JAAKInstructionView] Cannot pause/resume - beyond last step")
             return
         }
         
         isPaused.toggle()
         
         if isPaused {
-            print("⏸️ [JAAKInstructionView] Pausing - current progress: \(currentSegmentProgress)")
             // Pause both timers
             stopCurrentTimer()
             pauseButton.setTitle("Continuar", for: .normal)
         } else {
-            print("▶️ [JAAKInstructionView] Resuming - stored progress: \(currentSegmentProgress)")
             // Resume both timers
             resumeCurrentStep()
             pauseButton.setTitle("Pausar", for: .normal)
@@ -758,8 +753,6 @@ internal class JAAKInstructionView: UIView {
     }
     
     @objc private func cameraButtonTapped() {
-        print("📷 [JAAKInstructionView] Camera button tapped")
-        
         // Toggle camera menu visibility
         let isVisible = !cameraMenuView.isHidden
         
@@ -932,8 +925,6 @@ internal class JAAKInstructionView: UIView {
         guard let nameLabel = sender.subviews.first?.subviews.first as? UILabel,
               let cameraName = nameLabel.text else { return }
         
-        print("📷 [JAAKInstructionView] Camera selected: \(cameraName)")
-        
         // Update UI to show selection
         updateCameraMenuSelection(selectedButton: sender)
         
@@ -945,14 +936,12 @@ internal class JAAKInstructionView: UIView {
     }
     
     @objc private func cameraMenuItemHighlighted(_ sender: UIButton) {
-        print("🔘 [JAAKInstructionView] Camera menu item highlighted")
         UIView.animate(withDuration: 0.2) {
             sender.backgroundColor = UIColor.white.withAlphaComponent(0.25)
         }
     }
     
     @objc private func cameraMenuItemUnhighlighted(_ sender: UIButton) {
-        print("🔘 [JAAKInstructionView] Camera menu item unhighlighted")
         UIView.animate(withDuration: 0.2) {
             // Restore original background based on selection state
             let isSelected = !(sender.subviews.first?.subviews.last?.isHidden ?? true)
@@ -999,8 +988,6 @@ internal class JAAKInstructionView: UIView {
     }
 
     @objc private func nextButtonTapped() {
-        print("➡️ [JAAKInstructionView] Next button tapped - current step: \(currentStepIndex)")
-        
         // FIRST: Stop all timers to prevent interference
         stopCurrentTimer()
         isPaused = false
@@ -1008,12 +995,9 @@ internal class JAAKInstructionView: UIView {
         
         // SECOND: Complete current step's progress bar IMMEDIATELY to 100%
         if currentStepIndex < segmentFills.count {
-            print("📊 [JAAKInstructionView] Forcing completion of segment \(currentStepIndex)")
             forceCompleteSegmentProgress(stepIndex: currentStepIndex)
             // Reset current segment progress tracking to indicate completion
             currentSegmentProgress = 1.0
-        } else {
-            print("⚠️ [JAAKInstructionView] Cannot complete segment - currentStepIndex (\(currentStepIndex)) >= segmentFills.count (\(segmentFills.count))")
         }
         
         // THIRD: Force immediate layout update to show the completion
@@ -1027,7 +1011,6 @@ internal class JAAKInstructionView: UIView {
     
     private func resumeCurrentStep() {
         guard currentStepIndex < instructionSteps.count else { 
-            print("❌ [JAAKInstructionView] Cannot resume - currentStepIndex (\(currentStepIndex)) >= instructionSteps.count (\(instructionSteps.count))")
             // Reset pause state if we're beyond the last step
             isPaused = false
             pauseButton.setTitle("Pausar", for: .normal)
@@ -1040,11 +1023,8 @@ internal class JAAKInstructionView: UIView {
         let savedProgress = getCurrentSegmentProgress()
         let remainingDuration = step.duration * (1.0 - Double(savedProgress))
         
-        print("🔄 [JAAKInstructionView] Resuming step \(currentStepIndex) - saved progress: \(savedProgress), remaining duration: \(remainingDuration)")
-        
         // Safety check for remaining duration
         guard remainingDuration > 0 else {
-            print("⚠️ [JAAKInstructionView] No remaining time - moving to next step immediately")
             moveToNextStep()
             return
         }
@@ -1057,20 +1037,15 @@ internal class JAAKInstructionView: UIView {
         // Ensure totalStepDuration is set correctly
         totalStepDuration = step.duration
         
-        print("🕐 [JAAKInstructionView] Time calculation - elapsed: \(elapsedTime)s, stepStartTime offset: \(-elapsedTime)s")
-        
         // Resume progress timer first
         startProgressTimer()
         
         // Then resume step timer for remaining duration
         stepTimer = Timer.scheduledTimer(withTimeInterval: remainingDuration, repeats: false) { [weak self] _ in
-            print("🔚 [JAAKInstructionView] Step timer completed after resume")
             self?.stopProgressTimer()
             self?.moveToNextStep()
         }
         
-        print("✅ [JAAKInstructionView] Timers resumed - progress timer: \(progressTimer != nil), step timer: \(stepTimer != nil)")
-        print("📊 [JAAKInstructionView] Expected progress after resume: \(savedProgress)")
     }
     
     private func getCurrentSegmentProgress() -> Float {
@@ -1090,7 +1065,6 @@ internal class JAAKInstructionView: UIView {
         stepStartTime = nil
         totalStepDuration = 0
         // DON'T reset currentSegmentProgress here - it's needed for resume
-        print("⏹️ [JAAKInstructionView] Timers stopped - preserving progress: \(currentSegmentProgress)")
     }
     
     private func startProgressTimer() {
@@ -1109,12 +1083,6 @@ internal class JAAKInstructionView: UIView {
     
     private func updateContinuousProgress() {
         guard let startTime = stepStartTime, !isPaused else { 
-            if stepStartTime == nil {
-                print("⚠️ [JAAKInstructionView] updateContinuousProgress called but stepStartTime is nil")
-            }
-            if isPaused {
-                print("⚠️ [JAAKInstructionView] updateContinuousProgress called but isPaused is true")
-            }
             return 
         }
         
@@ -1123,11 +1091,6 @@ internal class JAAKInstructionView: UIView {
         
         // Track current segment progress
         currentSegmentProgress = Float(progressRatio)
-        
-        // Debug log every 20 calls (once per second at 20fps)
-        if Int(elapsedTime * 20) % 20 == 0 {
-            print("📊 [JAAKInstructionView] Progress update - elapsed: \(elapsedTime)s, ratio: \(progressRatio), segment: \(currentSegmentProgress)")
-        }
         
         // Update individual segment progress (0 to 1 for current step)
         updateIndividualSegmentProgress(stepIndex: currentStepIndex, progress: Float(progressRatio))
@@ -1368,8 +1331,6 @@ internal class JAAKInstructionView: UIView {
     }
     
     private func completeInstructions() {
-        print("✅ [JAAKInstructionView] Completing all instructions")
-        
         // Disable pause button to prevent interaction
         pauseButton.isEnabled = false
         isPaused = false
@@ -1549,28 +1510,24 @@ internal class JAAKInstructionView: UIView {
         if let resourceBundleURL = frameworkBundle.url(forResource: "JAAKVisage", withExtension: "bundle"),
            let resourceBundle = Bundle(url: resourceBundleURL),
            let image = UIImage(named: named, in: resourceBundle, compatibleWith: nil) {
-            print("✅ Loaded icon '\(named)' from resource bundle")
             return image
         }
         
         // Try loading from framework bundle Resources directory
         if let path = frameworkBundle.path(forResource: named, ofType: "png", inDirectory: "Resources"),
            let image = UIImage(contentsOfFile: path) {
-            print("✅ Loaded icon '\(named)' from framework bundle Resources")
             return image
         }
         
         // Try loading from framework bundle Assets directory
         if let path = frameworkBundle.path(forResource: named, ofType: "png", inDirectory: "Assets"),
            let image = UIImage(contentsOfFile: path) {
-            print("✅ Loaded icon '\(named)' from framework bundle Assets")
             return image
         }
         
         // Try loading from framework bundle root
         if let path = frameworkBundle.path(forResource: named, ofType: "png"),
            let image = UIImage(contentsOfFile: path) {
-            print("✅ Loaded icon '\(named)' from framework bundle root")
             return image
         }
         
@@ -1583,32 +1540,18 @@ internal class JAAKInstructionView: UIView {
         
         for devPath in developmentPaths {
             if let image = UIImage(contentsOfFile: devPath) {
-                print("✅ Loaded icon '\(named)' from development path: \(devPath)")
                 return image
             }
         }
         
         // Try main bundle as fallback
         if let image = UIImage(named: named, in: frameworkBundle, compatibleWith: nil) {
-            print("✅ Loaded icon '\(named)' from framework bundle by name")
             return image
         }
         
         // Final fallback: main app bundle
         if let image = UIImage(named: named) {
-            print("✅ Loaded icon '\(named)' from main app bundle")
             return image
-        }
-        
-        print("❌ Failed to load icon '\(named)'")
-        print("  - Framework bundle: \(frameworkBundle.bundlePath)")
-        print("  - Framework bundle identifier: \(frameworkBundle.bundleIdentifier ?? "unknown")")
-        
-        // Debug: List available resources
-        if let resourceBundleURL = frameworkBundle.url(forResource: "JAAKVisage", withExtension: "bundle") {
-            print("  - Resource bundle found at: \(resourceBundleURL)")
-        } else {
-            print("  - No resource bundle found")
         }
         
         return nil
@@ -1684,8 +1627,6 @@ internal class JAAKInstructionView: UIView {
         let segment = progressSegments[stepIndex]
         let oldConstraint = segmentWidthConstraints[stepIndex]
         
-        print("🔧 [JAAKInstructionView] Completing segment \(stepIndex) - old constraint active: \(oldConstraint.isActive)")
-        
         // Deactivate old constraint
         oldConstraint.isActive = false
         
@@ -1698,8 +1639,6 @@ internal class JAAKInstructionView: UIView {
         
         // Store the new constraint
         segmentWidthConstraints[stepIndex] = completeConstraint
-        
-        print("✅ [JAAKInstructionView] New constraint created for segment \(stepIndex) - active: \(completeConstraint.isActive)")
         
         // Force immediate layout update with animation for visual feedback
         UIView.animate(withDuration: 0.2, animations: {
@@ -1728,20 +1667,17 @@ internal class JAAKInstructionView: UIView {
     private func loadWatermarkImage() {
         let urlString = "https://storage.googleapis.com/jaak-static/commons/powered-by-jaak.png"
         guard let url = URL(string: urlString) else {
-            print("⚠️ [JAAKInstructionView] Invalid watermark URL")
             return
         }
         
         // Download image asynchronously
         URLSession.shared.dataTask(with: url) { data, response, error in
             guard let data = data, error == nil, let image = UIImage(data: data) else {
-                print("⚠️ [JAAKInstructionView] Failed to load watermark image: \(error?.localizedDescription ?? "Unknown error")")
                 return
             }
             
             DispatchQueue.main.async {
                 self.watermarkImageView.image = image
-                print("✅ [JAAKInstructionView] Watermark image loaded successfully")
             }
         }.resume()
     }

@@ -49,7 +49,6 @@ internal class JAAKFaceDetectionEngine: NSObject {
         guard !configuration.disableFaceDetection else { return }
         guard !isDetectionPaused else { return } // Skip detection if paused for instructions
         guard let faceDetector = faceDetector else { 
-            print("❌ [FaceDetectionEngine] FaceDetector is nil - models not loaded?")
             return 
         }
         
@@ -222,7 +221,6 @@ internal class JAAKFaceDetectionEngine: NSObject {
         
         // **IMPORTANT: IMMEDIATELY cancel recording when face position is incorrect**
         if !isValidPosition {
-            print("❌ [FaceDetectionEngine] Face position incorrect - canceling recording immediately")
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
                 self.delegate?.faceDetectionEngine(self, shouldCancelRecording: true)
@@ -254,7 +252,6 @@ internal class JAAKFaceDetectionEngine: NSObject {
         consecutiveInvalidFrames = 0
         
         // **IMPORTANT: IMMEDIATELY cancel recording when face is lost**
-        print("❌ [FaceDetectionEngine] No face detected - canceling recording immediately")
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.delegate?.faceDetectionEngine(self, shouldCancelRecording: true)
@@ -468,8 +465,6 @@ internal class JAAKFaceDetectionEngine: NSObject {
         consecutiveNoFaceFrames = 0
         lastFaceDetectionTime = Date()
         currentSampleBuffer = nil
-        
-        print("🔄 [FaceDetectionEngine] Detection state reset for auto recording")
     }
     
     /// Transform bounding box coordinates from MediaPipe native space to display space
@@ -527,14 +522,12 @@ internal class JAAKFaceDetectionEngine: NSObject {
     /// - Parameter newConfiguration: new face detector configuration
     func updateConfiguration(_ newConfiguration: JAAKVisageConfiguration) {
         self.configuration = newConfiguration
-        print("✅ [FaceDetectionEngine] Configuration updated")
     }
     
     /// Reset stability counters (useful when recording starts/stops)
     func resetStabilityCounters() {
         consecutiveValidFrames = 0
         consecutiveInvalidFrames = 0
-        print("🔄 [FaceDetectionEngine] Stability counters reset")
     }
 }
 
@@ -545,7 +538,6 @@ extension JAAKFaceDetectionEngine: FaceDetectorLiveStreamDelegate {
         
         
         if let error = error {
-            print("❌ [FaceDetectionEngine] Live stream error: \(error)")
             let detectorError = JAAKVisageError(
                 label: "Error en la detección de flujo en vivo MediaPipe",
                 code: "MEDIAPIPE_LIVE_STREAM_FAILED",
@@ -556,7 +548,6 @@ extension JAAKFaceDetectionEngine: FaceDetectorLiveStreamDelegate {
         }
         
         guard let result = result else {
-            print("⚠️ [FaceDetectionEngine] No result from live stream detection")
             return
         }
         
@@ -570,13 +561,11 @@ extension JAAKFaceDetectionEngine: FaceDetectorLiveStreamDelegate {
     /// Pause face detection (for instructions)
     func pauseDetection() {
         isDetectionPaused = true
-        print("⏸️ [FaceDetectionEngine] Face detection paused")
     }
     
     /// Resume face detection (after instructions)
     func resumeDetection() {
         isDetectionPaused = false
-        print("▶️ [FaceDetectionEngine] Face detection resumed")
     }
 }
 

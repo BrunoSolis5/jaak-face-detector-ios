@@ -66,7 +66,6 @@ public class JAAKVisageSDK: NSObject {
             try checkPermissions()
         } catch let error as JAAKVisageError where error.code == "PERMISSIONS_REQUIRED" {
             // Request permissions asynchronously and retry
-            print("🔐 [VisageSDK] Permissions required, requesting asynchronously...")
             requestPermissionsAndRetryStart()
             return
         }
@@ -81,7 +80,6 @@ public class JAAKVisageSDK: NSObject {
     
     /// Request permissions asynchronously and retry start
     private func requestPermissionsAndRetryStart() {
-        print("🔐 [VisageSDK] Requesting permissions asynchronously...")
         
         // Request permissions on background queue to avoid blocking UI
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -92,11 +90,9 @@ public class JAAKVisageSDK: NSObject {
                 
                 DispatchQueue.main.async {
                     if granted {
-                        print("✅ [VisageSDK] Permissions granted, retrying start...")
                         do {
                             try self.continueStartDetection()
                         } catch {
-                            print("❌ [VisageSDK] Failed to start after permissions granted: \(error)")
                             self.updateStatus(.error)
                             let detectorError = error as? JAAKVisageError ?? JAAKVisageError(
                                 label: "Failed to start after permissions granted",
@@ -106,7 +102,6 @@ public class JAAKVisageSDK: NSObject {
                             self.delegate?.faceDetector(self, didEncounterError: detectorError)
                         }
                     } else {
-                        print("❌ [VisageSDK] Permissions denied")
                         self.updateStatus(.error)
                         let permissionError = error ?? JAAKVisageError(
                             label: "Required permissions not granted",
@@ -129,24 +124,19 @@ public class JAAKVisageSDK: NSObject {
         // Check if session is already configured
         let captureSession = cameraManager.getCaptureSession()
         if captureSession.inputs.isEmpty {
-            print("🔧 [VisageSDK] Camera session not configured, setting up...")
             try cameraManager.setupCaptureSession(with: configuration)
         } else {
-            print("✅ [VisageSDK] Camera session already configured, skipping setup")
         }
         
         // Load models if not already loaded
         if status != .loaded {
             try loadModels()
         } else {
-            print("✅ [VisageSDK] Models already loaded, skipping...")
         }
         
         // Start camera
-        print("🎥 [VisageSDK] About to start camera session...")
         showCustomStatus("Solicitando acceso a la cámara...")
         cameraManager.startSession()
-        print("🎥 [VisageSDK] Camera session start command sent")
         showCustomStatus("Cámara activa")
         
         // Start security monitoring
@@ -237,7 +227,6 @@ public class JAAKVisageSDK: NSObject {
         guard let videoRecorder = videoRecorder, let cameraManager = cameraManager else { return }
         guard videoRecorder.isRecording() else { return }
         
-        print("⏹️ [VisageSDK] Stopping video recording")
         videoRecorder.stopRecording(with: cameraManager)
         
         // Stop the timer
@@ -288,7 +277,6 @@ public class JAAKVisageSDK: NSObject {
         }
         
         connection.videoOrientation = videoOrientation
-        print("🔄 [JAAKVisage] Preview orientation updated to: \(videoOrientation.rawValue)")
     }
     
     /// Get capture session
@@ -345,17 +333,13 @@ public class JAAKVisageSDK: NSObject {
     /// Load AI models for face detection
     /// - Throws: JAAKVisageError if unable to load models
     public func loadModels() throws {
-        print("🔧 [VisageSDK] Starting model loading...")
         updateStatus(.loading)
         
         guard let faceDetectionEngine = faceDetectionEngine else {
-            print("❌ [VisageSDK] FaceDetectionEngine is nil")
             throw JAAKVisageError(label: "Face detection engine not initialized", code: "FACE_ENGINE_NIL")
         }
         
-        print("🔧 [VisageSDK] Calling faceDetectionEngine.loadModels()...")
         try faceDetectionEngine.loadModels()
-        print("✅ [VisageSDK] Models loaded successfully")
         
         updateStatus(.loaded)
     }
@@ -381,9 +365,7 @@ public class JAAKVisageSDK: NSObject {
             try loadModels()
             
             cameraManager?.startSession()
-            print("✅ [JAAKVisage] Camera session setup, models loaded, and session started for preview")
         } catch {
-            print("❌ [JAAKVisage] Failed to setup camera session for preview: \(error)")
         }
         
         // Add camera preview layer
@@ -393,9 +375,7 @@ public class JAAKVisageSDK: NSObject {
             previewLayer.videoGravity = .resizeAspect
             view.layer.addSublayer(previewLayer)
             
-            print("✅ [JAAKVisage] Preview layer added to view with frame: \(view.bounds)")
         } else {
-            print("❌ [JAAKVisage] Failed to get camera preview layer")
         }
         
         // Add face tracking overlay
@@ -403,9 +383,7 @@ public class JAAKVisageSDK: NSObject {
             faceTrackingOverlay.frame = view.bounds
             faceTrackingOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             view.addSubview(faceTrackingOverlay)
-            print("✅ [JAAKVisage] Face tracking overlay added to view with frame: \(view.bounds)")
         } else {
-            print("⚠️ [JAAKVisage] Face tracking overlay is nil, not adding to view")
         }
         
         // Add recording timer with responsive positioning
@@ -423,9 +401,7 @@ public class JAAKVisageSDK: NSObject {
                                                        constant: (position.y - 0.5) * 200)  // Offset from center
             ])
             
-            print("✅ [JAAKVisage] Recording timer added with responsive constraints at position: \(position)")
         } else {
-            print("⚠️ [JAAKVisage] Recording timer is nil, not adding to view")
         }
         
         
@@ -441,7 +417,6 @@ public class JAAKVisageSDK: NSObject {
                 assistanceMessageView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
             ])
             
-            print("✅ [VisageSDK] Assistance message view added as full-screen overlay")
         }
         
         // Add status indicator view as overlay (matching webcomponent position: top-left)
@@ -456,7 +431,6 @@ public class JAAKVisageSDK: NSObject {
                 statusIndicatorView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
             ])
             
-            print("✅ [VisageSDK] Status indicator view added as overlay")
         }
         
         // Add instruction view as full-screen overlay (includes help button) - ON TOP of all other views
@@ -471,7 +445,6 @@ public class JAAKVisageSDK: NSObject {
                 instructionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
             ])
             
-            print("✅ [VisageSDK] Instruction view added as full-screen overlay")
         }
         
         
@@ -486,20 +459,17 @@ public class JAAKVisageSDK: NSObject {
         
         let urlString = "https://storage.googleapis.com/jaak-static/commons/powered-by-jaak.png"
         guard let url = URL(string: urlString) else {
-            print("⚠️ [VisageSDK] Invalid watermark URL")
             return
         }
         
         // Download image asynchronously
         URLSession.shared.dataTask(with: url) { data, response, error in
             guard let data = data, error == nil, let image = UIImage(data: data) else {
-                print("⚠️ [VisageSDK] Failed to load watermark image: \(error?.localizedDescription ?? "Unknown error")")
                 return
             }
             
             DispatchQueue.main.async {
                 watermarkImageView.image = image
-                print("✅ [VisageSDK] Watermark image loaded successfully")
             }
         }.resume()
     }
@@ -519,16 +489,13 @@ public class JAAKVisageSDK: NSObject {
     // MARK: - Private Methods
     
     private func setupComponents() {
-        print("🔧 [VisageSDK] Setting up components...")
         
         // Initialize core components
         cameraManager = JAAKCameraManager()
         cameraManager?.delegate = self
-        print("✅ [VisageSDK] CameraManager initialized")
         
         faceDetectionEngine = JAAKFaceDetectionEngine(configuration: configuration)
         faceDetectionEngine?.delegate = self
-        print("✅ [VisageSDK] FaceDetectionEngine initialized")
         
         videoRecorder = JAAKVideoRecorder(configuration: configuration)
         videoRecorder?.delegate = self
@@ -541,37 +508,30 @@ public class JAAKVisageSDK: NSObject {
         // Initialize UI components
         // Always create face tracking overlay
         faceTrackingOverlay = JAAKFaceTrackingOverlay(configuration: configuration.faceTrackerStyles)
-        print("✅ [VisageSDK] Face tracking overlay created")
         
         // Always create recording timer
         recordingTimer = JAAKRecordingTimer(configuration: configuration.timerStyles)
-        print("✅ [VisageSDK] Recording timer created")
         
         // Initialize instruction components (tutorial-style instructions)
         if configuration.enableInstructions {
-            print("📋 [VisageSDK] Creating instruction view (enableInstructions = true)")
             instructionView = JAAKInstructionView(configuration: configuration)
             instructionController = JAAKInstructionController(configuration: configuration, instructionView: instructionView!)
             instructionController?.delegate = self
             // The instruction controller will handle the instruction view delegate
         } else {
-            print("📋 [VisageSDK] Skipping instruction view (enableInstructions = false)")
         }
         
         // Always create validation message view (for positioning guidance)
         assistanceMessageView = JAAKAssistanceMessageView(configuration: configuration)
-        print("✅ [VisageSDK] Validation message view created")
         
         // Always create status indicator view (matching webcomponent status-indicator)
         statusIndicatorView = JAAKStatusIndicatorView(configuration: configuration)
-        print("✅ [VisageSDK] Status indicator view created")
         
         // Create watermark image view
         watermarkImageView = UIImageView()
         watermarkImageView?.contentMode = .scaleAspectFit
         watermarkImageView?.alpha = 0.6
         loadWatermarkImage()
-        print("✅ [VisageSDK] Watermark image view created")
         
         
         // Listen for orientation change notifications from overlay
@@ -584,17 +544,12 @@ public class JAAKVisageSDK: NSObject {
     }
     
     private func checkPermissions() throws {
-        print("🔐 [VisageSDK] Checking permissions...")
-        print("🔐 [VisageSDK] enableMicrophone: \(configuration.enableMicrophone)")
-        print("🔐 [VisageSDK] Camera authorized: \(JAAKPermissionManager.isCameraAuthorized())")
-        print("🔐 [VisageSDK] Microphone authorized: \(JAAKPermissionManager.isMicrophoneAuthorized())")
         
         // Check if permissions are already granted
         let cameraAuthorized = JAAKPermissionManager.isCameraAuthorized()
         let microphoneAuthorized = !configuration.enableMicrophone || JAAKPermissionManager.isMicrophoneAuthorized()
         
         if cameraAuthorized && microphoneAuthorized {
-            print("✅ [VisageSDK] All required permissions already granted")
             return
         }
         
@@ -656,7 +611,6 @@ public class JAAKVisageSDK: NSObject {
     
     
     @objc private func updateCaptureOrientation() {
-        print("📱 [VisageSDK] Updating capture orientation due to device rotation")
         cameraManager?.updateVideoOrientation()
     }
 }
@@ -710,7 +664,6 @@ extension JAAKVisageSDK: JAAKFaceDetectionEngineDelegate {
             if message.faceExists && message.correctPosition {
                 // Start recording if not already recording and face is stable
                 if let videoRecorder = videoRecorder, !videoRecorder.isRecording(), cameraManager != nil {
-                    print("🎬 [VisageSDK] Auto-recording triggered (stable position) - starting video recording")
                     recordVideo { result in
                         switch result {
                         case .success(let fileResult):
@@ -721,16 +674,13 @@ extension JAAKVisageSDK: JAAKFaceDetectionEngineDelegate {
                     }
                 } else if let videoRecorder = videoRecorder, videoRecorder.isRecording() {
                     // Continue recording - face is still in good position
-                    print("✅ [VisageSDK] Face still in good position - continuing recording")
                 }
             } else {
                 // Face is not in correct position or doesn't exist
                 if let videoRecorder = videoRecorder, videoRecorder.isRecording() {
                     // The FaceDetectionEngine will handle IMMEDIATE cancellation
                     if !message.faceExists {
-                        print("⚠️ [VisageSDK] No face detected during recording - will cancel immediately")
                     } else {
-                        print("⚠️ [VisageSDK] Face position incorrect during recording - will cancel immediately")
                     }
                 }
             }
@@ -758,7 +708,6 @@ extension JAAKVisageSDK: JAAKFaceDetectionEngineDelegate {
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, shouldCancelRecording: Bool) {
         // Cancel recording if face has been unstable for too long or face is lost
         if shouldCancelRecording, let videoRecorder = videoRecorder, videoRecorder.isRecording() {
-            print("❌ [VisageSDK] Canceling recording due to face detection issues")
             
             // Cancel timer IMMEDIATELY without animation
             recordingTimer?.cancelTimer()
@@ -786,14 +735,12 @@ extension JAAKVisageSDK: JAAKFaceDetectionEngineDelegate {
 
 extension JAAKVisageSDK: JAAKVideoRecorderDelegate {
     func videoRecorder(_ recorder: JAAKVideoRecorder, didStartRecording outputURL: URL) {
-        print("🎬 [VisageSDK] Video recorder started, starting timer with duration: \(configuration.videoDuration)")
         updateStatus(.recording)
         recordingTimer?.startTimer(duration: configuration.videoDuration)
         
         // Reset stability counters when recording starts successfully
         faceDetectionEngine?.resetStabilityCounters()
         
-        print("🎬 [VisageSDK] Timer start command sent to recordingTimer: \(String(describing: recordingTimer))")
     }
     
     func videoRecorder(_ recorder: JAAKVideoRecorder, didUpdateProgress progress: Float) {
@@ -869,17 +816,14 @@ extension JAAKVisageSDK: JAAKInstructionControllerDelegate {
     func instructionController(_ controller: JAAKInstructionController, shouldPauseDetection pause: Bool) {
         // Pause or resume face detection based on instruction state
         if pause {
-            print("🎓 [VisageSDK] Pausing face detection for instructions")
             faceDetectionEngine?.pauseDetection()
         } else {
-            print("🎓 [VisageSDK] Resuming face detection after instructions")
             faceDetectionEngine?.resumeDetection()
         }
     }
     
     func instructionController(_ controller: JAAKInstructionController, didRequestCameraList completion: @escaping ([String], String?) -> Void) {
         // Get available cameras using AVFoundation
-        print("📷 [VisageSDK] Requesting camera list")
         
         var deviceTypes: [AVCaptureDevice.DeviceType] = [.builtInWideAngleCamera, .builtInTelephotoCamera]
         if #available(iOS 13.0, *) {
@@ -918,13 +862,11 @@ extension JAAKVisageSDK: JAAKInstructionControllerDelegate {
             currentCameraName = "Back Camera" // Default fallback
         }
         
-        print("📷 [VisageSDK] Available cameras: \(finalCameras), current: \(currentCameraName)")
         completion(finalCameras, currentCameraName)
     }
     
     func instructionController(_ controller: JAAKInstructionController, didSelectCamera cameraName: String) {
         // Switch to selected camera
-        print("📷 [VisageSDK] Switching to camera: \(cameraName)")
         
         do {
             // Determine camera position from name
@@ -949,7 +891,6 @@ extension JAAKVisageSDK: JAAKInstructionControllerDelegate {
             self.configuration = updatedConfig
             
         } catch {
-            print("❌ [VisageSDK] Failed to switch camera: \(error)")
         }
     }
 }
@@ -959,7 +900,6 @@ extension JAAKVisageSDK: JAAKInstructionControllerDelegate {
 
 extension JAAKVisageSDK {
     private func updateComponentsWithNewConfiguration() {
-        print("🔧 [VisageSDK] Configuration changed, updating components...")
         
         // Update UI components with new configuration
         if let recordingTimer = recordingTimer {
@@ -975,7 +915,6 @@ extension JAAKVisageSDK {
         videoRecorder?.updateConfiguration(configuration)
         instructionController?.updateConfiguration(configuration)
         
-        print("✅ [VisageSDK] Components updated with new configuration")
     }
     
     /// Update configuration without recreating the entire SDK
@@ -987,7 +926,6 @@ extension JAAKVisageSDK {
         let requiresRestart = configurationRequiresRestart(from: oldConfiguration, to: newConfiguration)
         
         if requiresRestart {
-            print("🔄 [VisageSDK] Configuration changes require restart")
             let wasRunning = (status == .running)
             
             if wasRunning {
@@ -1002,27 +940,18 @@ extension JAAKVisageSDK {
                     
                     // After restart, reapply microphone configuration if needed
                     // This handles both: microphone setting changes AND camera position changes with microphone enabled
-                    print("🔧 [VisageSDK] Checking microphone reapplication after restart...")
-                    print("🔧 [VisageSDK] - oldConfig.enableMicrophone: \(oldConfiguration.enableMicrophone)")
-                    print("🔧 [VisageSDK] - newConfig.enableMicrophone: \(newConfiguration.enableMicrophone)")
-                    print("🔧 [VisageSDK] - oldConfig.cameraPosition: \(oldConfiguration.cameraPosition)")
-                    print("🔧 [VisageSDK] - newConfig.cameraPosition: \(newConfiguration.cameraPosition)")
                     
                     if oldConfiguration.enableMicrophone != newConfiguration.enableMicrophone {
-                        print("🎤 [VisageSDK] Reapplying microphone configuration after restart (setting changed)")
                         handleMicrophoneConfigurationChange(enabled: newConfiguration.enableMicrophone)
                     } else if newConfiguration.enableMicrophone && oldConfiguration.cameraPosition != newConfiguration.cameraPosition {
-                        print("🎤 [VisageSDK] Reapplying microphone configuration after camera change")
                         handleMicrophoneConfigurationChange(enabled: newConfiguration.enableMicrophone)
                     } else {
-                        print("✅ [VisageSDK] No microphone reapplication needed after restart")
                     }
                 } catch {
                     delegate?.faceDetector(self, didEncounterError: error as? JAAKVisageError ?? JAAKVisageError(label: "Failed to restart after configuration update", code: "CONFIG_UPDATE_RESTART_FAILED"))
                 }
             }
         } else {
-            print("✅ [VisageSDK] Applying configuration changes dynamically")
             // Apply dynamic changes without restart
             self.configuration = newConfiguration
             applyDynamicConfigurationChanges(from: oldConfiguration, to: newConfiguration)
@@ -1077,19 +1006,15 @@ extension JAAKVisageSDK {
     }
     
     private func handleMicrophoneConfigurationChange(enabled: Bool) {
-        print("🎤 [VisageSDK] Microphone configuration changed to: \(enabled)")
         
         // Update the camera manager's microphone setup
         guard let cameraManager = cameraManager else {
-            print("❌ [VisageSDK] Camera manager not available for microphone update")
             return
         }
         
         do {
             try cameraManager.updateMicrophoneConfiguration(enabled: enabled)
-            print("✅ [VisageSDK] Microphone configuration updated successfully")
         } catch {
-            print("❌ [VisageSDK] Failed to update microphone configuration: \(error)")
         }
     }
     
@@ -1104,7 +1029,6 @@ extension JAAKVisageSDK {
                     instructionView.isHidden = true
                 }
             }
-            print("📋 [VisageSDK] Instructions visibility updated: \(enabled ? "enabled" : "disabled")")
         }
     }
     
@@ -1186,7 +1110,6 @@ internal class CameraPreviewView: UIView {
         
         if connection.videoOrientation != videoOrientation {
             connection.videoOrientation = videoOrientation
-            print("🔄 [CameraPreviewView] Preview orientation updated to: \(videoOrientation.rawValue)")
         }
     }
 }

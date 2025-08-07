@@ -58,7 +58,6 @@ public struct JAAKVisageView: UIViewRepresentable {
             // Check if configuration has changed and needs refresh
             if let currentDetector = uiView.faceDetector, 
                !configurationMatches(currentDetector.configuration, configuration) {
-                print("🔄 [JAAKVisageView] Configuration changed, recreating detector...")
                 
                 // Stop current detector
                 currentDetector.stopDetection()
@@ -85,7 +84,6 @@ public struct JAAKVisageView: UIViewRepresentable {
     private func setupFaceDetector(for view: JAAKVisageUIView) {
         guard !view.isSetup else { return }
         
-        print("🏗️ [JAAKVisageView] Setting up face detector...")
         
         // Create face detector instance
         let detector = JAAKVisageSDK(configuration: configuration)
@@ -113,7 +111,6 @@ public struct JAAKVisageView: UIViewRepresentable {
         view.internalDelegate = internalDelegate // Store strong reference
         view.isSetup = true
         
-        print("✅ [JAAKVisageView] Face detector setup completed")
     }
     
     private func configurationMatches(_ config1: JAAKVisageConfiguration, _ config2: JAAKVisageConfiguration) -> Bool {
@@ -167,26 +164,23 @@ public class JAAKVisageUIView: UIView {
     /// Start face detection
     @available(iOS 13.0, *)
     public func startDetection() {
-        print("🚀 [JAAKVisageUIView] Starting face detection...")
         
         do {
             try faceDetector?.startDetection()
         } catch {
-            print("❌ [JAAKVisageUIView] Failed to start detection: \(error)")
+            
         }
     }
     
     /// Stop face detection
     @available(iOS 13.0, *)
     public func stopDetection() {
-        print("⏹️ [JAAKVisageUIView] Stopping face detection...")
         faceDetector?.stopDetection()
     }
     
     /// Record video
     @available(iOS 13.0, *)
     public func recordVideo(completion: @escaping (Result<JAAKFileResult, JAAKVisageError>) -> Void) {
-        print("🎬 [JAAKVisageUIView] Starting video recording...")
         faceDetector?.recordVideo(completion: completion)
     }
     
