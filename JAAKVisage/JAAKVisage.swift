@@ -670,6 +670,8 @@ public class JAAKVisageSDK: NSObject {
                 if !self.recordingCancelled {
                     self.updateStatus(.captureComplete)
                     self.stopRecordingInternal()
+                    // Stop face detection immediately to prevent race condition
+                    // This prevents new auto-recording cycles while processing the completed video
                     self.stopFaceDetectionInternal()
                 }
                 self.countdownTimer?.invalidate()
@@ -937,6 +939,9 @@ extension JAAKVisageSDK: JAAKVideoRecorderDelegate {
         // Simulate processing time (like webcomponent)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.updateStatus(.videoReady)
+            
+            // Face detection already stopped in captureComplete to prevent race condition
+            // No need to stop again here
             
             // Only notify delegate about completed (not cancelled) recordings
             self?.delegate?.faceDetector(self!, didCaptureFile: fileResult)
