@@ -649,13 +649,15 @@ public class JAAKVisageSDK: NSObject {
         
         print("⏰ [startCountdown] Starting countdown from \(countdown)...")
         
-        // Update status with countdown message
+        // Update both displays (messages + center timer) with initial countdown
         updateStatusWithCountdown()
         
         countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             
             self.countdown -= 1
+            
+            // Update both displays (messages + center timer) with same countdown
             self.updateStatusWithCountdown()
             
             if self.countdown == Int(self.configuration.videoDuration) - 1 {
@@ -680,6 +682,24 @@ public class JAAKVisageSDK: NSObject {
     private func updateStatusWithCountdown() {
         updateStatus(.countdown)
         statusIndicatorView?.showStatus("Iniciando grabación en \(countdown)...")
+        
+        // Update center timer display with same countdown value
+        updateCenterTimer()
+    }
+    
+    /// Update center timer to match countdown
+    private func updateCenterTimer() {
+        // Calculate progress: countdown 5→0 becomes progress 0.0→1.0
+        let totalDuration = Int(configuration.videoDuration)
+        let progress = Float(totalDuration - countdown) / Float(totalDuration)
+        
+        // Show center timer if countdown is active, hide when finished
+        if countdown > 0 {
+            recordingTimer?.show()
+            recordingTimer?.updateDisplay(countdownValue: countdown, progress: progress)
+        } else {
+            recordingTimer?.hide()
+        }
     }
     
     /// Cancel countdown timer
@@ -701,8 +721,8 @@ public class JAAKVisageSDK: NSObject {
             videoRecorder.stopRecording(with: cameraManager!)
         }
         
-        // Stop timer
-        recordingTimer?.cancelTimer()
+        // Hide center timer (unified cancellation)
+        recordingTimer?.hide()
         
         // Reset position tracking for next attempt
         wasInOptimalPosition = false
@@ -729,8 +749,7 @@ public class JAAKVisageSDK: NSObject {
             }
         }
         
-        // Start UI timer
-        recordingTimer?.startTimer(duration: configuration.videoDuration)
+        // UI timer already started in startCountdown() to stay synchronized
     }
     
     /// Stop recording internally (called from countdown completion)
@@ -898,7 +917,9 @@ extension JAAKVisageSDK: JAAKVideoRecorderDelegate {
     }
     
     func videoRecorder(_ recorder: JAAKVideoRecorder, didUpdateProgress progress: Float) {
-        recordingTimer?.updateProgress(progress)
+        // Don't update timer progress here - it's controlled by countdown timer
+        // to stay synchronized with countdown messages
+        // recordingTimer?.updateProgress(progress)
     }
     
     func videoRecorder(_ recorder: JAAKVideoRecorder, didFinishRecording fileResult: JAAKFileResult) {

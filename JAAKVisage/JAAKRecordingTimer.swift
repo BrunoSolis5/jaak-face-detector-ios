@@ -92,6 +92,26 @@ internal class JAAKRecordingTimer: UIView {
         CATransaction.commit()
     }
     
+    /// Update display with countdown value and progress (unified timer method)
+    /// - Parameters:
+    ///   - countdownValue: current countdown value (5,4,3,2,1,0)
+    ///   - progress: progress value from 0.0 to 1.0
+    func updateDisplay(countdownValue: Int, progress: Float) {
+        currentProgress = progress
+        
+        // Update circular progress
+        progressLayer.strokeEnd = CGFloat(progress)
+        
+        // Display countdown value directly
+        timerLabel.text = "\(max(0, countdownValue))"
+        
+        // Animate the progress change
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(0.1)
+        progressLayer.strokeEnd = CGFloat(progress)
+        CATransaction.commit()
+    }
+    
     /// Update timer configuration
     /// - Parameter configuration: new timer styles
     func updateConfiguration(_ configuration: JAAKTimerStyles) {
