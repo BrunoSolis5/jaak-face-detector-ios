@@ -146,6 +146,9 @@ internal class JAAKVideoRecorder: NSObject {
             pendingCompletion?(.success(fileResult))
             pendingCompletion = nil
             
+            // Notify delegate about successful recording completion
+            delegate?.videoRecorder(self, didFinishRecording: fileResult)
+            
             // Clean up temporary file
             try? FileManager.default.removeItem(at: outputURL)
             
@@ -157,6 +160,9 @@ internal class JAAKVideoRecorder: NSObject {
             )
             pendingCompletion?(.failure(detectorError))
             pendingCompletion = nil
+            
+            // Notify delegate about recording failure
+            delegate?.videoRecorder(self, didFailWithError: detectorError)
         }
     }
     

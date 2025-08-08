@@ -10,6 +10,12 @@ public enum JAAKVisageStatus: String, CaseIterable {
     case running = "running"
     case finished = "finished"
     case stopped = "stopped"
+    // New states matching webcomponent
+    case faceDetected = "face-detected"
+    case countdown = "countdown"
+    case captureComplete = "capture-complete" 
+    case processingVideo = "processing-video"
+    case videoReady = "video-ready"
 }
 
 /// Error types for JAAKVisage

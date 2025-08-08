@@ -210,22 +210,20 @@ internal class JAAKFaceDetectionEngine: NSObject {
         
         // Determine if position is stable enough for recording
         let isStableForRecording = consecutiveValidFrames >= requiredStabilityFrames
+        
+        print("📊 [FaceDetectionEngine] isValidPosition: \(isValidPosition), consecutiveValidFrames: \(consecutiveValidFrames)/\(requiredStabilityFrames), isStableForRecording: \(isStableForRecording)")
         // No longer need shouldCancelRecording since cancellation is immediate
         
         let message = JAAKFaceDetectionMessage(
-            label: isValidPosition ? "Perfecto" : instructionMessage,
+            label: isStableForRecording ? "Perfecto" : instructionMessage,
             details: "Face confidence: \(confidence), Valid frames: \(consecutiveValidFrames), Invalid frames: \(consecutiveInvalidFrames)",
             faceExists: true,
             correctPosition: isStableForRecording // Only true when stable enough
         )
         
-        // **IMPORTANT: IMMEDIATELY cancel recording when face position is incorrect**
-        if !isValidPosition {
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
-                self.delegate?.faceDetectionEngine(self, shouldCancelRecording: true)
-            }
-        }
+        // Auto-recording logic is now handled by JAAKVisage handleOptimalPosition method
+        // This follows the webcomponent pattern where all recording logic is centralized
+        // So we don't call shouldCancelRecording here anymore
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -251,11 +249,8 @@ internal class JAAKFaceDetectionEngine: NSObject {
         consecutiveValidFrames = 0
         consecutiveInvalidFrames = 0
         
-        // **IMPORTANT: IMMEDIATELY cancel recording when face is lost**
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.delegate?.faceDetectionEngine(self, shouldCancelRecording: true)
-        }
+        // Auto-recording cancellation is now handled by JAAKVisage handleOptimalPosition method
+        // This follows the webcomponent pattern where all recording logic is centralized
         
         let message = JAAKFaceDetectionMessage(
             label: "Dirige tu rostro hacia la cámara",

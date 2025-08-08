@@ -21,6 +21,12 @@ public class JAAKVisageSDK: NSObject {
     /// Current status of the face detector
     public private(set) var status: JAAKVisageStatus = .notLoaded
     
+    // Countdown properties (matching webcomponent)
+    private var countdownTimer: Timer?
+    private var countdown: Int = 0
+    private var recordingCancelled: Bool = false
+    private var wasInOptimalPosition: Bool = false
+    
     // MARK: - Private Properties
     
     // Core components
@@ -166,6 +172,17 @@ public class JAAKVisageSDK: NSObject {
         // Check if instructions are currently showing to preserve state
         let shouldShowInstructions = configuration.enableInstructions
         
+        // Cancel any active countdown or recording before restarting
+        if countdown > 0 || isRecording() {
+            cancelCountdownAndRecording()
+            print("🔄 [restartDetection] Cancelled active countdown/recording before restart")
+        }
+        
+        // Reset countdown and position state variables
+        // Note: Don't reset recordingCancelled here - let the delegate handle it after discarding cancelled recording
+        wasInOptimalPosition = false
+        countdown = 0
+        
         // Stop detection components but avoid hiding instructions to prevent flashing
         cameraManager?.stopSession()
         securityMonitor?.stopMonitoring()
@@ -198,10 +215,10 @@ public class JAAKVisageSDK: NSObject {
     
     // MARK: - Public Methods - Recording Operations
     
-    /// Record video with face detection
+    /// Record video with face detection (manual recording - not used by auto-recorder)
     /// - Parameter completion: Completion handler with result
     public func recordVideo(completion: @escaping (Result<JAAKFileResult, JAAKVisageError>) -> Void) {
-        guard status == .running else {
+        guard status == .running || status == .faceDetected else {
             let error = JAAKVisageError(
                 label: "Cannot record video - detector not running",
                 code: "INVALID_STATE"
@@ -219,6 +236,9 @@ public class JAAKVisageSDK: NSObject {
             return
         }
         
+        // For manual recording, bypass countdown and start immediately
+        updateStatus(.recording)
+        recordingTimer?.startTimer(duration: configuration.videoDuration)
         videoRecorder.startRecording(with: cameraManager, completion: completion)
     }
     
@@ -590,23 +610,215 @@ public class JAAKVisageSDK: NSObject {
         case .loading:
             return "Inicializando detección facial..."
         case .loaded:
-            return "Detención facial lista"
+            return "Detección facial lista"
         case .running:
             return "Detección facial activa"
         case .recording:
             return "Grabando video..."
         case .finished:
-            return "Video listo para visualización"
+            return "Captura completada"
         case .stopped:
             return "Cámara detenida"
         case .error:
             return "Error en el componente"
+        // New states matching webcomponent
+        case .faceDetected:
+            return "Rostro detectado - iniciando grabación"
+        case .countdown:
+            return "Iniciando grabación en..." // Will be updated with countdown number
+        case .captureComplete:
+            return "Captura completada"
+        case .processingVideo:
+            return "Procesando video..."
+        case .videoReady:
+            return "Video listo para visualización"
         }
     }
     
     /// Show custom status message (for specific camera/processing states)
     private func showCustomStatus(_ message: String) {
         statusIndicatorView?.showStatus(message)
+    }
+    
+    // MARK: - Countdown Methods (matching webcomponent exactly)
+    
+    /// Start countdown before recording (exactly like webcomponent)
+    private func startCountdown() {
+        countdown = Int(configuration.videoDuration)
+        recordingCancelled = false
+        
+        print("⏰ [startCountdown] Starting countdown from \(countdown)...")
+        
+        // Update status with countdown message
+        updateStatusWithCountdown()
+        
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            
+            self.countdown -= 1
+            self.updateStatusWithCountdown()
+            
+            if self.countdown == Int(self.configuration.videoDuration) - 1 {
+                // Start recording when countdown reaches videoDuration-1 (like webcomponent)
+                self.startRecordingInternal()
+            }
+            
+            if self.countdown <= 0 {
+                // Stop recording and detection if not cancelled
+                if !self.recordingCancelled {
+                    self.updateStatus(.captureComplete)
+                    self.stopRecordingInternal()
+                    self.stopFaceDetectionInternal()
+                }
+                self.countdownTimer?.invalidate()
+                self.countdownTimer = nil
+            }
+        }
+    }
+    
+    /// Update status with countdown number
+    private func updateStatusWithCountdown() {
+        updateStatus(.countdown)
+        statusIndicatorView?.showStatus("Iniciando grabación en \(countdown)...")
+    }
+    
+    /// Cancel countdown timer
+    private func cancelCountdown() {
+        countdownTimer?.invalidate()
+        countdownTimer = nil
+        countdown = 0
+    }
+    
+    /// Cancel countdown and recording (exactly like webcomponent)
+    private func cancelCountdownAndRecording() {
+        recordingCancelled = true
+        
+        // Cancel countdown
+        cancelCountdown()
+        
+        // Stop and discard recording if active
+        if let videoRecorder = videoRecorder, videoRecorder.isRecording() {
+            videoRecorder.stopRecording(with: cameraManager!)
+        }
+        
+        // Stop timer
+        recordingTimer?.cancelTimer()
+        
+        // Reset position tracking for next attempt
+        wasInOptimalPosition = false
+        
+        print("🚫 [JAAKVisage] Recording cancelled - face out of position")
+    }
+    
+    // MARK: - Internal Recording Methods
+    
+    /// Start recording internally (called from countdown)
+    private func startRecordingInternal() {
+        guard let videoRecorder = videoRecorder, let cameraManager = cameraManager else { return }
+        
+        updateStatus(.recording)
+        videoRecorder.startRecording(with: cameraManager) { [weak self] result in
+            // Handle result in completion callback, but main flow continues through countdown
+            switch result {
+            case .success:
+                break // Success handled by countdown completion
+            case .failure(let error):
+                DispatchQueue.main.async {
+                    self?.handleRecordingError(error)
+                }
+            }
+        }
+        
+        // Start UI timer
+        recordingTimer?.startTimer(duration: configuration.videoDuration)
+    }
+    
+    /// Stop recording internally (called from countdown completion)
+    private func stopRecordingInternal() {
+        guard let videoRecorder = videoRecorder else { return }
+        
+        if videoRecorder.isRecording() {
+            videoRecorder.stopRecording(with: cameraManager!)
+        }
+        
+        // Stop UI timer
+        recordingTimer?.stopTimer()
+    }
+    
+    /// Stop face detection internally (like webcomponent stopFaceDetection)
+    private func stopFaceDetectionInternal() {
+        // Stop detection completely to prevent further auto-recording attempts
+        stopDetection()
+        
+        // Stop camera session to prevent frozen frame and phantom detections
+        cameraManager?.stopSession()
+        
+        // Clear the camera preview to remove frozen frame
+        clearCameraPreview()
+        
+        // Reset optimal position tracking
+        wasInOptimalPosition = false
+        
+        // Ensure status is set to finished, not running
+        updateStatus(.finished)
+    }
+    
+    /// Clear camera preview to remove frozen frame
+    private func clearCameraPreview() {
+        // Remove all preview layers to clear frozen frame
+        guard let view = previewView else { return }
+        
+        view.layer.sublayers?.forEach { sublayer in
+            if sublayer is AVCaptureVideoPreviewLayer {
+                sublayer.removeFromSuperlayer()
+            }
+        }
+        
+        print("🧹 [JAAKVisage] Camera preview cleared")
+    }
+    
+    /// Handle recording error
+    private func handleRecordingError(_ error: JAAKVisageError) {
+        updateStatus(.error)
+        recordingTimer?.cancelTimer()
+        delegate?.faceDetector(self, didEncounterError: error)
+    }
+    
+    // MARK: - Optimal Position Handling (exactly like webcomponent)
+    
+    /// Handle optimal position detection (matching webcomponent handleOptimalPosition)
+    private func handleOptimalPosition(message: JAAKFaceDetectionMessage) {
+        let isCurrentlyOptimal = message.faceExists && message.correctPosition
+        
+        print("🔍 [handleOptimalPosition] faceExists: \(message.faceExists), correctPosition: \(message.correctPosition), isCurrentlyOptimal: \(isCurrentlyOptimal)")
+        
+        // State transitions with debouncing (simplified for iOS - exact logic from webcomponent)
+        if isCurrentlyOptimal && !wasInOptimalPosition && !isRecording() && countdown == 0 {
+            // Start countdown (like webcomponent)
+            print("✅ [handleOptimalPosition] Starting countdown - face detected!")
+            updateStatus(.faceDetected)
+            instructionController?.hideInstructions() // Hide instructions like webcomponent
+            startCountdown()
+            wasInOptimalPosition = true
+            
+        } else if !isCurrentlyOptimal && wasInOptimalPosition && (countdown > 0 || isRecording()) {
+            // Cancel countdown and/or recording when mask turns from green to white (correctPosition becomes false)
+            print("🚫 [handleOptimalPosition] Mask turned white - canceling countdown/recording")
+            updateStatus(.running)
+            statusIndicatorView?.showStatus("Posición perdida - cancelando grabación")
+            cancelCountdownAndRecording()
+            wasInOptimalPosition = false
+            
+        } else if isCurrentlyOptimal && !wasInOptimalPosition {
+            wasInOptimalPosition = true
+        } else if !isCurrentlyOptimal && wasInOptimalPosition && !isRecording() && countdown == 0 {
+            wasInOptimalPosition = false
+        }
+    }
+    
+    /// Check if currently recording
+    private func isRecording() -> Bool {
+        return videoRecorder?.isRecording() ?? false
     }
     
     
@@ -658,32 +870,9 @@ extension JAAKVisageSDK: JAAKFaceDetectionEngineDelegate {
             
         }
         
-        // Handle auto-recording with stability logic
-        
-        if configuration.autoRecorder && (status == .running || status == .recording) {
-            if message.faceExists && message.correctPosition {
-                // Start recording if not already recording and face is stable
-                if let videoRecorder = videoRecorder, !videoRecorder.isRecording(), cameraManager != nil {
-                    recordVideo { result in
-                        switch result {
-                        case .success(let fileResult):
-                            self.delegate?.faceDetector(self, didCaptureFile: fileResult)
-                        case .failure(let error):
-                            self.delegate?.faceDetector(self, didEncounterError: error)
-                        }
-                    }
-                } else if let videoRecorder = videoRecorder, videoRecorder.isRecording() {
-                    // Continue recording - face is still in good position
-                }
-            } else {
-                // Face is not in correct position or doesn't exist
-                if let videoRecorder = videoRecorder, videoRecorder.isRecording() {
-                    // The FaceDetectionEngine will handle IMMEDIATE cancellation
-                    if !message.faceExists {
-                    } else {
-                    }
-                }
-            }
+        // Handle auto-recording with stability logic (exactly like webcomponent handleOptimalPosition)
+        if configuration.autoRecorder {
+            handleOptimalPosition(message: message)
         }
         
         // Show validation message (always shown for positioning guidance)
@@ -706,28 +895,9 @@ extension JAAKVisageSDK: JAAKFaceDetectionEngineDelegate {
     }
     
     func faceDetectionEngine(_ engine: JAAKFaceDetectionEngine, shouldCancelRecording: Bool) {
-        // Cancel recording if face has been unstable for too long or face is lost
-        if shouldCancelRecording, let videoRecorder = videoRecorder, videoRecorder.isRecording() {
-            
-            // Cancel timer IMMEDIATELY without animation
-            recordingTimer?.cancelTimer()
-            
-            // Stop the actual video recording
-            videoRecorder.stopRecording(with: cameraManager!)
-            
-            // Reset status back to running (not finished)
-            updateStatus(.running)
-            
-            // Reset stability counters after cancellation
-            engine.resetStabilityCounters()
-            
-            // Notify that recording was canceled with a user-friendly message
-            let cancelError = JAAKVisageError(
-                label: "Grabación cancelada - mantén tu rostro centrado y visible", 
-                code: "AUTO_RECORDING_CANCELED_FACE_LOST"
-            )
-            delegate?.faceDetector(self, didEncounterError: cancelError)
-        }
+        // This is now handled by handleOptimalPosition method following webcomponent logic
+        // The webcomponent uses handleOptimalPosition to manage countdown and recording cancellation
+        // So we don't need this method anymore, but keep it for compatibility
     }
 }
 
@@ -735,12 +905,12 @@ extension JAAKVisageSDK: JAAKFaceDetectionEngineDelegate {
 
 extension JAAKVisageSDK: JAAKVideoRecorderDelegate {
     func videoRecorder(_ recorder: JAAKVideoRecorder, didStartRecording outputURL: URL) {
-        updateStatus(.recording)
-        recordingTimer?.startTimer(duration: configuration.videoDuration)
+        // Note: updateStatus(.recording) and timer start are handled by startRecordingInternal()
+        // to avoid duplicate recording management when using countdown system
         
-        // Reset stability counters when recording starts successfully
-        faceDetectionEngine?.resetStabilityCounters()
-        
+        // IMPORTANT: Do NOT reset stability counters here! 
+        // Resetting them would break the face detection stability that we just achieved,
+        // causing immediate cancellation of the recording we just started.
     }
     
     func videoRecorder(_ recorder: JAAKVideoRecorder, didUpdateProgress progress: Float) {
@@ -748,13 +918,24 @@ extension JAAKVisageSDK: JAAKVideoRecorderDelegate {
     }
     
     func videoRecorder(_ recorder: JAAKVideoRecorder, didFinishRecording fileResult: JAAKFileResult) {
-        updateStatus(.finished)
+        // Check if recording was cancelled - if so, discard the result
+        if recordingCancelled {
+            print("🗑️ [JAAKVisage] Discarding cancelled recording - not sending to delegate")
+            updateStatus(.running) // Return to detection state
+            recordingCancelled = false // Reset flag for next recording
+            return
+        }
         
-        // Stop timer
-        recordingTimer?.stopTimer()
+        // Follow webcomponent flow: processing-video → video-ready
+        updateStatus(.processingVideo)
         
-        // Always notify delegate about the completed recording
-        delegate?.faceDetector(self, didCaptureFile: fileResult)
+        // Simulate processing time (like webcomponent)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.updateStatus(.videoReady)
+            
+            // Only notify delegate about completed (not cancelled) recordings
+            self?.delegate?.faceDetector(self!, didCaptureFile: fileResult)
+        }
     }
     
     
