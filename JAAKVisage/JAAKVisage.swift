@@ -753,9 +753,6 @@ public class JAAKVisageSDK: NSObject {
         // Stop camera session to prevent frozen frame and phantom detections
         cameraManager?.stopSession()
         
-        // Clear the camera preview to remove frozen frame
-        clearCameraPreview()
-        
         // Reset optimal position tracking
         wasInOptimalPosition = false
         
@@ -763,19 +760,6 @@ public class JAAKVisageSDK: NSObject {
         updateStatus(.finished)
     }
     
-    /// Clear camera preview to remove frozen frame
-    private func clearCameraPreview() {
-        // Remove all preview layers to clear frozen frame
-        guard let view = previewView else { return }
-        
-        view.layer.sublayers?.forEach { sublayer in
-            if sublayer is AVCaptureVideoPreviewLayer {
-                sublayer.removeFromSuperlayer()
-            }
-        }
-        
-        print("🧹 [JAAKVisage] Camera preview cleared")
-    }
     
     /// Handle recording error
     private func handleRecordingError(_ error: JAAKVisageError) {
