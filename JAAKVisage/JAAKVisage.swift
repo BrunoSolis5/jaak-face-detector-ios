@@ -91,7 +91,7 @@ public class JAAKVisageSDK: NSObject {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             
-            JAAKPermissionManager.requestRequiredPermissions(enableMicrophone: self.configuration.enableMicrophone) { [weak self] granted, error in
+            JAAKPermissionManager.requestRequiredPermissions { [weak self] granted, error in
                 guard let self = self else { return }
                 
                 DispatchQueue.main.async {
@@ -567,7 +567,8 @@ public class JAAKVisageSDK: NSObject {
         
         // Check if permissions are already granted
         let cameraAuthorized = JAAKPermissionManager.isCameraAuthorized()
-        let microphoneAuthorized = !configuration.enableMicrophone || JAAKPermissionManager.isMicrophoneAuthorized()
+        // Microphone removed - only check camera permission
+        let microphoneAuthorized = true  // Always true since microphone is not used
         
         if cameraAuthorized && microphoneAuthorized {
             return
@@ -577,7 +578,7 @@ public class JAAKVisageSDK: NSObject {
         // For now, throw an error to indicate permissions are needed
         let missingPermissions = [
             !cameraAuthorized ? "camera" : nil,
-            (configuration.enableMicrophone && !microphoneAuthorized) ? "microphone" : nil
+            // Microphone removed from permissions
         ].compactMap { $0 }
         
         throw JAAKVisageError(
@@ -1126,15 +1127,9 @@ extension JAAKVisageSDK {
                 do {
                     try startDetection()
                     
-                    // After restart, reapply microphone configuration if needed
-                    // This handles both: microphone setting changes AND camera position changes with microphone enabled
+                    // Configuration restart completed
                     
-                    if oldConfiguration.enableMicrophone != newConfiguration.enableMicrophone {
-                        handleMicrophoneConfigurationChange(enabled: newConfiguration.enableMicrophone)
-                    } else if newConfiguration.enableMicrophone && oldConfiguration.cameraPosition != newConfiguration.cameraPosition {
-                        handleMicrophoneConfigurationChange(enabled: newConfiguration.enableMicrophone)
-                    } else {
-                    }
+                    // Microphone configuration removed
                 } catch {
                     delegate?.faceDetector(self, didEncounterError: error as? JAAKVisageError ?? JAAKVisageError(label: "Failed to restart after configuration update", code: "CONFIG_UPDATE_RESTART_FAILED"))
                 }
@@ -1149,7 +1144,7 @@ extension JAAKVisageSDK {
     /// Check if configuration changes require a full restart
     private func configurationRequiresRestart(from oldConfig: JAAKVisageConfiguration, to newConfig: JAAKVisageConfiguration) -> Bool {
         // These changes require restart
-        // enableMicrophone is handled separately to avoid full restart
+        // Microphone functionality removed
         return oldConfig.cameraPosition != newConfig.cameraPosition ||
                oldConfig.videoQuality != newConfig.videoQuality ||
                oldConfig.disableFaceDetection != newConfig.disableFaceDetection ||
@@ -1161,10 +1156,7 @@ extension JAAKVisageSDK {
         
         // Update UI components that can change dynamically
         
-        // Handle microphone changes without full restart
-        if oldConfig.enableMicrophone != newConfig.enableMicrophone {
-            handleMicrophoneConfigurationChange(enabled: newConfig.enableMicrophone)
-        }
+        // Microphone functionality removed
         
         
         // Update timer styles if they changed
@@ -1192,18 +1184,6 @@ extension JAAKVisageSDK {
         }
     }
     
-    private func handleMicrophoneConfigurationChange(enabled: Bool) {
-        
-        // Update the camera manager's microphone setup
-        guard let cameraManager = cameraManager else {
-            return
-        }
-        
-        do {
-            try cameraManager.updateMicrophoneConfiguration(enabled: enabled)
-        } catch {
-        }
-    }
     
     private func updateInstructionsVisibility(enabled: Bool) {
         DispatchQueue.main.async { [weak self] in

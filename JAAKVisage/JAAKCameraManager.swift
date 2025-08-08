@@ -8,17 +8,14 @@ internal class JAAKCameraManager: NSObject {
     
     private let captureSession = AVCaptureSession()
     private var videoInput: AVCaptureDeviceInput?
-    private var audioInput: AVCaptureDeviceInput?
     private var videoOutput: AVCaptureVideoDataOutput?
-    private var audioOutput: AVCaptureAudioDataOutput?
     
     // Configuration storage
     private var currentConfiguration: JAAKVisageConfiguration?
     
-    // Recording outputs - use different approaches based on microphone setting
+    // Recording outputs - video only (no audio)
     private var assetWriter: AVAssetWriter?
     private var videoWriterInput: AVAssetWriterInput?
-    private var audioWriterInput: AVAssetWriterInput?
     private var pixelBufferAdaptor: AVAssetWriterInputPixelBufferAdaptor?
     
     private var isCurrentlyRecording = false
@@ -53,25 +50,7 @@ internal class JAAKCameraManager: NSObject {
         // Setup camera input with validation
         try setupCameraInput(position: configuration.cameraPosition, configuration: configuration)
         
-        // Setup microphone input if permissions are available (always try)
-        // The enableMicrophone configuration will control whether to use it in recording
-        print("🎤 [CameraManager] Checking microphone authorization...")
-        print("🎤 [CameraManager] Microphone authorized: \(JAAKPermissionManager.isMicrophoneAuthorized())")
-        
-        if JAAKPermissionManager.isMicrophoneAuthorized() {
-            do {
-                try setupMicrophoneInput()
-                try setupAudioOutput()
-                print("✅ [CameraManager] Microphone and audio output setup successful")
-            } catch {
-                print("⚠️ [CameraManager] Audio setup failed: \(error)")
-                // Continue without microphone - don't fail the entire setup
-                audioInput = nil
-                audioOutput = nil
-            }
-        } else {
-            print("🎤 [CameraManager] Microphone not authorized, skipping audio setup")
-        }
+        // Microphone/audio removed - videos are always recorded without audio
         
         // Setup video output first
         try setupVideoOutput(with: configuration)
@@ -212,11 +191,7 @@ internal class JAAKCameraManager: NSObject {
     func startRecording(to outputURL: URL) {
         guard !isCurrentlyRecording else { return }
         
-        print("🎬 [CameraManager] Starting new recording...")
-        print("🎬 [CameraManager] - Microphone enabled in config: \(currentConfiguration?.enableMicrophone ?? false)")
-        print("🎬 [CameraManager] - Audio input available: \(audioInput != nil)")
-        print("🎬 [CameraManager] - Audio output available: \(audioOutput != nil)")
-        print("🎬 [CameraManager] - Previous audioWriterInput: \(audioWriterInput != nil)")
+        print("🎬 [CameraManager] Starting new recording (video only)...")
         
         recordingOutputURL = outputURL
         isCurrentlyRecording = true
@@ -242,118 +217,8 @@ internal class JAAKCameraManager: NSObject {
         return isCurrentlyRecording
     }
     
-    /// Update microphone configuration dynamically without restarting session
-    /// - Parameter enabled: whether microphone should be enabled
-    func updateMicrophoneConfiguration(enabled: Bool) throws {
-        print("🎤 [CameraManager] Updating microphone configuration to: \(enabled)")
-        
-        // If currently recording, stop it since audio configuration will change
-        let wasRecording = isCurrentlyRecording
-        if wasRecording {
-            print("🎬 [CameraManager] Stopping active recording due to microphone configuration change")
-            stopRecording()
-        }
-        
-        // Store the current configuration for recording decisions
-        currentConfiguration?.enableMicrophone = enabled
-        
-        if enabled {
-            // Request microphone permission if needed
-            let microphoneAuthorized = JAAKPermissionManager.isMicrophoneAuthorized()
-            print("🎤 [CameraManager] Current microphone authorization: \(microphoneAuthorized)")
-            
-            if !microphoneAuthorized {
-                print("🎤 [CameraManager] Requesting microphone permission asynchronously...")
-                
-                // Request permission asynchronously to avoid blocking UI
-                DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                    JAAKPermissionManager.requestMicrophonePermission { granted in
-                        print("🎤 [CameraManager] Microphone permission result: \(granted)")
-                        
-                        DispatchQueue.main.async {
-                            guard let self = self else { return }
-                            
-                            if granted {
-                                print("✅ [CameraManager] Microphone permission granted, setting up audio...")
-                                do {
-                                    try self.setupMicrophoneAfterPermission()
-                                } catch {
-                                    print("❌ [CameraManager] Failed to setup microphone after permission granted: \(error)")
-                                }
-                            } else {
-                                print("⚠️ [CameraManager] Microphone permission denied - audio will be disabled")
-                            }
-                        }
-                    }
-                }
-                return // Exit early, setup will continue asynchronously
-            }
-            
-            // Now setup microphone if we have permissions
-            // Add microphone if not already present
-            if audioInput == nil {
-                print("🎤 [CameraManager] Adding microphone input...")
-                captureSession.beginConfiguration()
-                do {
-                    try setupMicrophoneInput()
-                    try setupAudioOutput()
-                    captureSession.commitConfiguration()
-                    print("✅ [CameraManager] Microphone input and output added successfully")
-                } catch {
-                    captureSession.commitConfiguration()
-                    throw error
-                }
-            } else {
-                print("✅ [CameraManager] Microphone already configured")
-            }
-        } else {
-            // Remove microphone if present
-            if let audioInput = audioInput {
-                print("🎤 [CameraManager] Removing microphone input...")
-                captureSession.beginConfiguration()
-                captureSession.removeInput(audioInput)
-                self.audioInput = nil
-                
-                if let audioOutput = audioOutput {
-                    captureSession.removeOutput(audioOutput)
-                    self.audioOutput = nil
-                }
-                captureSession.commitConfiguration()
-                print("✅ [CameraManager] Microphone input and output removed successfully")
-                
-                // Also clear any active audio writer input since microphone is disabled
-                if audioWriterInput != nil {
-                    print("🎤 [CameraManager] Clearing audio writer input since microphone is disabled")
-                    audioWriterInput?.markAsFinished()
-                    audioWriterInput = nil
-                }
-            } else {
-                print("✅ [CameraManager] Microphone already disabled")
-            }
-        }
-    }
+    // Microphone functionality removed - videos recorded without audio
     
-    /// Setup microphone after permission has been granted asynchronously
-    private func setupMicrophoneAfterPermission() throws {
-        print("🎤 [CameraManager] Setting up microphone after permission granted...")
-        
-        // Add microphone if not already present
-        if audioInput == nil {
-            print("🎤 [CameraManager] Adding microphone input after permission...")
-            captureSession.beginConfiguration()
-            do {
-                try setupMicrophoneInput()
-                try setupAudioOutput()
-                captureSession.commitConfiguration()
-                print("✅ [CameraManager] Microphone input and output added successfully after permission")
-            } catch {
-                captureSession.commitConfiguration()
-                throw error
-            }
-        } else {
-            print("✅ [CameraManager] Microphone already configured after permission check")
-        }
-    }
     
     // MARK: - Private Methods
     
@@ -392,52 +257,7 @@ internal class JAAKCameraManager: NSObject {
         }
     }
     
-    private func setupMicrophoneInput() throws {
-        guard let microphone = AVCaptureDevice.default(for: .audio) else {
-            throw JAAKVisageError(
-                label: "Microphone device not found",
-                code: "MICROPHONE_DEVICE_NOT_FOUND"
-            )
-        }
-        
-        do {
-            let input = try AVCaptureDeviceInput(device: microphone)
-            if captureSession.canAddInput(input) {
-                captureSession.addInput(input)
-                audioInput = input
-            } else {
-                throw JAAKVisageError(
-                    label: "Cannot add microphone input",
-                    code: "MICROPHONE_INPUT_FAILED"
-                )
-            }
-        } catch {
-            throw JAAKVisageError(
-                label: "Failed to create microphone input",
-                code: "MICROPHONE_INPUT_CREATION_FAILED",
-                details: error
-            )
-        }
-    }
     
-    private func setupAudioOutput() throws {
-        print("🎤 [CameraManager] Setting up audio output...")
-        let output = AVCaptureAudioDataOutput()
-        
-        // Use the same queue as video for synchronization
-        output.setSampleBufferDelegate(self, queue: videoDataOutputQueue)
-        
-        if captureSession.canAddOutput(output) {
-            captureSession.addOutput(output)
-            audioOutput = output
-            print("✅ [CameraManager] Audio output added successfully")
-        } else {
-            throw JAAKVisageError(
-                label: "Cannot add audio output",
-                code: "AUDIO_OUTPUT_FAILED"
-            )
-        }
-    }
     
     private func setupVideoOutput(with configuration: JAAKVisageConfiguration) throws {
         print("📹 [CameraManager] Setting up video output following MediaPipe pattern...")
@@ -542,18 +362,8 @@ extension JAAKCameraManager: AVCaptureVideoDataOutputSampleBufferDelegate, AVCap
             if isCurrentlyRecording {
                 processVideoFrame(sampleBuffer)
             }
-        } else if output == audioOutput {
-            // Process audio sample for recording if active AND microphone is enabled
-            let microphoneEnabled = currentConfiguration?.enableMicrophone ?? false
-            print("🎤 [CameraManager] Audio frame received - recording: \(isCurrentlyRecording), micEnabled: \(microphoneEnabled), audioInput exists: \(audioInput != nil)")
-            
-            // Only process if recording, microphone enabled, and audio input still exists
-            if isCurrentlyRecording && microphoneEnabled && audioInput != nil {
-                processAudioFrame(sampleBuffer)
-            } else if isCurrentlyRecording {
-                print("🔇 [CameraManager] Skipping audio frame - microphone disabled or input removed")
-            }
         }
+        // Audio processing removed - video-only recording
     }
 }
 
@@ -606,26 +416,6 @@ extension JAAKCameraManager {
         }
     }
     
-    private func processAudioFrame(_ sampleBuffer: CMSampleBuffer) {
-        // Check if microphone is currently enabled in configuration
-        let microphoneEnabled = currentConfiguration?.enableMicrophone ?? false
-        
-        // Only append audio if microphone is enabled AND audio writer input is configured and ready
-        if microphoneEnabled {
-            if let audioWriterInput = audioWriterInput {
-                if audioWriterInput.isReadyForMoreMediaData {
-                    audioWriterInput.append(sampleBuffer)
-                    print("🎤 [CameraManager] Audio frame appended successfully (microphone enabled)")
-                } else {
-                    print("⚠️ [CameraManager] Audio writer input not ready for more data")
-                }
-            } else {
-                print("⚠️ [CameraManager] No audio writer input available for audio frame")
-            }
-        } else {
-            print("🔇 [CameraManager] Skipping audio frame - microphone disabled in configuration")
-        }
-    }
     
     private func setupAssetWriter(outputURL: URL) throws {
         guard let dimensions = videoDimensions else {
@@ -683,48 +473,8 @@ extension JAAKCameraManager {
             )
         }
         
-        // Setup audio writer input if microphone is enabled AND available
-        // Check both current configuration AND actual audio input presence
-        let shouldIncludeAudio = currentConfiguration?.enableMicrophone == true && audioInput != nil
-        
-        print("🎤 [CameraManager] Determining audio inclusion for recording...")
-        print("🎤 [CameraManager] - enableMicrophone: \(currentConfiguration?.enableMicrophone ?? false)")
-        print("🎤 [CameraManager] - audioInput available: \(audioInput != nil)")
-        print("🎤 [CameraManager] - audioOutput available: \(audioOutput != nil)")
-        print("🎤 [CameraManager] - shouldIncludeAudio: \(shouldIncludeAudio)")
-        
-        if shouldIncludeAudio {
-            print("🎤 [CameraManager] Setting up audio writer input...")
-            
-            guard currentConfiguration != nil else {
-                print("❌ [CameraManager] No current configuration available")
-                return
-            }
-            
-            let audioSettings: [String: Any] = [
-                AVFormatIDKey: kAudioFormatMPEG4AAC,
-                AVSampleRateKey: 44100,
-                AVNumberOfChannelsKey: 1,
-                AVEncoderBitRateKey: 64000
-            ]
-            
-            audioWriterInput = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
-            audioWriterInput?.expectsMediaDataInRealTime = true
-            
-            if let audioWriterInput = audioWriterInput, assetWriter.canAdd(audioWriterInput) {
-                assetWriter.add(audioWriterInput)
-                print("✅ [CameraManager] Audio writer input added to asset writer successfully")
-            } else {
-                print("❌ [CameraManager] Cannot add audio writer input to asset writer")
-                print("❌ [CameraManager] - audioWriterInput: \(audioWriterInput != nil)")
-                print("❌ [CameraManager] - assetWriter.canAdd: \(audioWriterInput != nil ? assetWriter.canAdd(audioWriterInput!) : false)")
-            }
-        } else {
-            print("📹 [CameraManager] Recording video-only (no audio)")
-            print("📹 [CameraManager] - config available: \(currentConfiguration != nil)")
-            print("📹 [CameraManager] - enableMicrophone: \(currentConfiguration?.enableMicrophone ?? false)")
-            print("📹 [CameraManager] - audioInput available: \(audioInput != nil)")
-        }
+        // Audio removed - always record video-only
+        print("📹 [CameraManager] Recording video-only (no audio)")
         
         // Start writing
         if !assetWriter.startWriting() {
@@ -746,9 +496,8 @@ extension JAAKCameraManager {
             return
         }
         
-        // Mark inputs as finished
+        // Mark video input as finished (audio removed)
         videoWriterInput?.markAsFinished()
-        audioWriterInput?.markAsFinished()
         
         // Finish writing
         assetWriter.finishWriting { [weak self] in
@@ -775,12 +524,10 @@ extension JAAKCameraManager {
     private func cleanupRecording() {
         print("🧹 [CameraManager] Cleaning up recording state...")
         print("🧹 [CameraManager] - assetWriter: \(assetWriter != nil)")
-        print("🧹 [CameraManager] - audioWriterInput: \(audioWriterInput != nil)")
         print("🧹 [CameraManager] - videoWriterInput: \(videoWriterInput != nil)")
         
         assetWriter = nil
         videoWriterInput = nil
-        audioWriterInput = nil
         pixelBufferAdaptor = nil
         videoDimensions = nil
         recordingStartTime = nil

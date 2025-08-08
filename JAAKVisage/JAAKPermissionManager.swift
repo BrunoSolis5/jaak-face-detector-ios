@@ -1,7 +1,7 @@
 import AVFoundation
 import UIKit
 
-/// Internal class for managing camera and microphone permissions
+/// Internal class for managing camera permissions
 internal class JAAKPermissionManager {
     
     /// Check if camera permission is granted
@@ -10,11 +10,6 @@ internal class JAAKPermissionManager {
         return AVCaptureDevice.authorizationStatus(for: .video) == .authorized
     }
     
-    /// Check if microphone permission is granted
-    /// - Returns: true if microphone access is authorized
-    static func isMicrophoneAuthorized() -> Bool {
-        return AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
-    }
     
     /// Request camera permission
     /// - Parameter completion: completion handler with result
@@ -37,32 +32,10 @@ internal class JAAKPermissionManager {
         }
     }
     
-    /// Request microphone permission
-    /// - Parameter completion: completion handler with result
-    static func requestMicrophonePermission(completion: @escaping (Bool) -> Void) {
-        let status = AVCaptureDevice.authorizationStatus(for: .audio)
-        
-        switch status {
-        case .authorized:
-            completion(true)
-        case .denied, .restricted:
-            completion(false)
-        case .notDetermined:
-            AVCaptureDevice.requestAccess(for: .audio) { granted in
-                DispatchQueue.main.async {
-                    completion(granted)
-                }
-            }
-        @unknown default:
-            completion(false)
-        }
-    }
     
-    /// Request all required permissions based on configuration
-    /// - Parameters:
-    ///   - enableMicrophone: whether microphone is needed
-    ///   - completion: completion handler with result
-    static func requestRequiredPermissions(enableMicrophone: Bool, completion: @escaping (Bool, JAAKVisageError?) -> Void) {
+    /// Request camera permission (microphone removed)
+    /// - Parameter completion: completion handler with result
+    static func requestRequiredPermissions(completion: @escaping (Bool, JAAKVisageError?) -> Void) {
         requestCameraPermission { cameraGranted in
             guard cameraGranted else {
                 let error = JAAKVisageError(
@@ -73,21 +46,7 @@ internal class JAAKPermissionManager {
                 return
             }
             
-            if enableMicrophone {
-                requestMicrophonePermission { microphoneGranted in
-                    if microphoneGranted {
-                        completion(true, nil)
-                    } else {
-                        let error = JAAKVisageError(
-                            label: "Permiso de micrófono denegado",
-                            code: "MICROPHONE_PERMISSION_DENIED"
-                        )
-                        completion(false, error)
-                    }
-                }
-            } else {
-                completion(true, nil)
-            }
+            completion(true, nil)
         }
     }
     

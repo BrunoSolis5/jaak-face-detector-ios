@@ -32,7 +32,7 @@ public struct JAAKVisageConfiguration {
     
     // Video Settings
     public var videoDuration: TimeInterval = 4.0
-    public var enableMicrophone: Bool = false
+    // public var enableMicrophone: Bool = false  // Removed - microphone never used
     public var cameraPosition: AVCaptureDevice.Position = .back
     public var videoQuality: AVCaptureSession.Preset = .photo
     
