@@ -40,8 +40,8 @@ public struct JAAKVisageConfiguration {
     public var disableFaceDetection: Bool = false
     public var useOfflineModel: Bool = false            // Reserved for future use
     
-    // Auto Recording Settings
-    public var autoRecorder: Bool = false
+    // Auto Recording Settings (always enabled - no longer configurable)
+    // public var autoRecorder: Bool = false  // Removed - auto recording always active
     
     // Timer Settings
     public var timerStyles: JAAKTimerStyles = JAAKTimerStyles()

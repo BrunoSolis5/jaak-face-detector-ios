@@ -876,9 +876,8 @@ extension JAAKVisageSDK: JAAKFaceDetectionEngineDelegate {
         }
         
         // Handle auto-recording with stability logic (exactly like webcomponent handleOptimalPosition)
-        if configuration.autoRecorder {
-            handleOptimalPosition(message: message)
-        }
+        // Auto-recording is always enabled now
+        handleOptimalPosition(message: message)
         
         // Show validation message (always shown for positioning guidance)
         DispatchQueue.main.async { [weak self] in
@@ -997,10 +996,8 @@ extension JAAKVisageSDK: JAAKInstructionControllerDelegate {
     func instructionController(_ controller: JAAKInstructionController, didCompleteInstructions completed: Bool) {
         // Instructions completed - user can now proceed with detection
         if completed {
-            // Optional: Start auto-recording if configured
-            if configuration.autoRecorder && status == .running {
-                // Auto-recording logic would be handled by face detection engine
-            }
+            // Auto-recording logic is always handled by face detection engine
+            // No need for additional configuration checks
         }
     }
     
@@ -1181,8 +1178,7 @@ extension JAAKVisageSDK {
         }
         
         // Update recording settings
-        if oldConfig.videoDuration != newConfig.videoDuration ||
-           oldConfig.autoRecorder != newConfig.autoRecorder {
+        if oldConfig.videoDuration != newConfig.videoDuration {
             videoRecorder?.updateConfiguration(newConfig)
         }
         
